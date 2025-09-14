@@ -6,7 +6,9 @@
 GLvoid drawScene(GLvoid);
 GLvoid Reshape(int w, int h);
 
-void main(int argc, char** argv) {//--- 윈도우 출력하고 콜백함수 설정 { //--- 윈도우 생성하기
+void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
+{	 
+	//--- 윈도우 생성하기
 	glutInit(&argc, argv); // glut 초기화
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA); // 디스플레이 모드 설정
 	glutInitWindowPosition(100, 100); // 윈도우의 위치 지정
