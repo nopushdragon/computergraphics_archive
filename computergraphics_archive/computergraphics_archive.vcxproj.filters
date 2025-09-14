@@ -48,5 +48,8 @@
     <ClCompile Include="실습2.cpp">
       <Filter>소스 파일\실습</Filter>
     </ClCompile>
+    <ClCompile Include="실습2_basic.cpp">
+      <Filter>소스 파일\실습</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

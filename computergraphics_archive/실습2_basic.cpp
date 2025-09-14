@@ -21,7 +21,7 @@ std::uniform_real_distribution<float> randcolor(0.0f, 1.0f);
 
 struct NEMO {
 	float r = randcolor(rd), g = randcolor(rd), b = randcolor(rd);
-	int x1, x2, y1, y2 = 0;
+	float x1, x2, y1, y2 = 0;
 };
 std::array<NEMO, 4> nemo;
 
@@ -44,10 +44,10 @@ void main(int argc, char** argv)
 	else
 		std::cout << "GLEW Initialized\n";
 
-	nemo[0].x1 = -400, nemo[0].y1 = 400, nemo[0].x2 = 0, nemo[0].y2 = 0;
-	nemo[1].x1 = 0, nemo[1].y1 = 400, nemo[1].x2 = 400, nemo[1].y2 = 0;
-	nemo[2].x1 = -400, nemo[2].y1 = 0, nemo[2].x2 = 0, nemo[2].y2 = -400;
-	nemo[3].x1 = 0, nemo[3].y1 = 0, nemo[3].x2 = 400, nemo[3].y2 = -400;
+	nemo[0].x1 = -1.0f, nemo[0].y1 = 1.0f, nemo[0].x2 = 0.0f, nemo[0].y2 = 0.0f;
+	nemo[1].x1 = 0.0f, nemo[1].y1 = 1.0f, nemo[1].x2 = 1.0f, nemo[1].y2 = 0.0f;
+	nemo[2].x1 = -1.0f, nemo[2].y1 = 0.0f, nemo[2].x2 = 0.0f, nemo[2].y2 = -1.0f;
+	nemo[3].x1 = 0.0f, nemo[3].y1 = 0.0f, nemo[3].x2 = 1.0f, nemo[3].y2 = -1.0f;
  
 	glutDisplayFunc(drawScene); 
 	glutReshapeFunc(Reshape); 
@@ -69,32 +69,29 @@ GLvoid drawScene() {
 
 GLvoid Reshape(int w, int h) { 
 	glViewport(0, 0, w, h);
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluOrtho2D(-SIZE / 2, SIZE / 2, -SIZE / 2, SIZE / 2);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
 }
 
 GLvoid Mouse(int button, int state, int x, int y)
 {
+	float mx = (float)x / (SIZE / 2) - 1.0f;
+	float my = (SIZE - (float)y) / (SIZE / 2) - 1.0f;
+
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
 		bool isleft = false;
-		for(int i = 0; i < nemo.size(); i++)
+		for (int i = 0; i < nemo.size(); i++)
 		{
-			if(x > nemo[i].x1 + 400 && x < nemo[i].x2 + 400 && y > 400 - nemo[i].y1 && y < 400 - nemo[i].y2)
+			if (mx > nemo[i].x1 && mx < nemo[i].x2 && my < nemo[i].y1 && my > nemo[i].y2)
 			{
-				nemo[i].r = randcolor(rd); 
+				nemo[i].r = randcolor(rd);
 				nemo[i].g = randcolor(rd);
 				nemo[i].b = randcolor(rd);
 				isleft = true;
 			}
 		}
 
-		if(!isleft){
-			red = randcolor(rd); 
+		if (!isleft) {
+			red = randcolor(rd);
 			green = randcolor(rd);
 			blue = randcolor(rd);
 		}
@@ -103,16 +100,15 @@ GLvoid Mouse(int button, int state, int x, int y)
 		bool isright = false;
 		for (int i = 0; i < nemo.size(); i++)
 		{
-			if (x > nemo[i].x1 + 400 && x < nemo[i].x2 + 400 &&
-				y > 400 - nemo[i].y1 && y < 400 - nemo[i].y2) 
+			if (mx > nemo[i].x1 && mx < nemo[i].x2 && my < nemo[i].y1 && my > nemo[i].y2)
 			{
-				if ((nemo[i].x2 - nemo[i].x1) > 60 && abs(nemo[i].y1 - nemo[i].y2) > 60) {
-					nemo[i].x1 += 30;
-					nemo[i].x2 -= 30;
-					nemo[i].y1 -= 30;
-					nemo[i].y2 += 30;
-					isright = true;
+				if ((nemo[i].x2 - nemo[i].x1) > 0.4f && abs(nemo[i].y1 - nemo[i].y2) > 0.4f) {
+					nemo[i].x1 += 0.1f;
+					nemo[i].x2 -= 0.1f;
+					nemo[i].y1 -= 0.1f;
+					nemo[i].y2 += 0.1f;
 				}
+				isright = true;
 			}
 		}
 
@@ -131,14 +127,14 @@ GLvoid Mouse(int button, int state, int x, int y)
 				num = 3;
 			}
 			if (num != 4) {
-				if ((nemo[num].x2 - nemo[num].x1) < 400 && abs(nemo[num].y1 - nemo[num].y2) < 400) { 
-					nemo[num].x1 -= 30;
-					nemo[num].x2 += 30;
-					nemo[num].y1 += 30;
-					nemo[num].y2 -= 30;
+				if ((nemo[num].x2 - nemo[num].x1) < 1.0f && abs(nemo[num].y1 - nemo[num].y2) < 1.0f) {
+					nemo[num].x1 -= 0.1f;
+					nemo[num].x2 += 0.1f;
+					nemo[num].y1 += 0.1f;
+					nemo[num].y2 -= 0.1f;
 				}
 			}
 		}
 	}
-	glutPostRedisplay(); 
+	glutPostRedisplay();
 }
