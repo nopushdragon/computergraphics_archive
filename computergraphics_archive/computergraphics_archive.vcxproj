@@ -123,8 +123,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="소스.cpp" />
-    <ClCompile Include="소스1.cpp" />
+    <ClCompile Include="워밍업1.cpp" />
+    <ClCompile Include="워밍업2.cpp" />
+    <ClCompile Include="워밍업3.cpp" />
+    <ClCompile Include="워밍업4.cpp" />
+    <ClCompile Include="워밍업5.cpp" />
+    <ClCompile Include="워밍업6.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
