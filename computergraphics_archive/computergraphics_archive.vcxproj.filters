@@ -33,5 +33,8 @@
     <ClCompile Include="워밍업6.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="컴그윈도우띄우기.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
