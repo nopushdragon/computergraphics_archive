@@ -13,34 +13,40 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="소스 파일\워밍업">
+      <UniqueIdentifier>{81066496-7132-472a-9961-8b6d4d2b25bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\실습">
+      <UniqueIdentifier>{03527a74-452f-4ccd-b256-eab9cb33eab2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="워밍업1.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\워밍업</Filter>
     </ClCompile>
     <ClCompile Include="워밍업2.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\워밍업</Filter>
     </ClCompile>
     <ClCompile Include="워밍업3.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\워밍업</Filter>
     </ClCompile>
     <ClCompile Include="워밍업4.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\워밍업</Filter>
     </ClCompile>
     <ClCompile Include="워밍업5.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\워밍업</Filter>
     </ClCompile>
     <ClCompile Include="워밍업6.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\워밍업</Filter>
     </ClCompile>
     <ClCompile Include="컴그윈도우띄우기.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\실습</Filter>
     </ClCompile>
     <ClCompile Include="실습1.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\실습</Filter>
     </ClCompile>
     <ClCompile Include="실습2.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\실습</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
