@@ -27,7 +27,8 @@ struct NEMO {
 	float size;
 	float r, g, b;
 	int b1 = 0; //0ÁÂ»ó 1ÁÂÇÏ 2¿ì»ó 2¿ìÇÏ
-	int b2 = 0 //0ÁÂ»ó 1ÁÂÇÏ 2¿ì»ó 2¿ìÇÏ
+	int b2 = 0; //0ÁÂ»ó 1ÁÂÇÏ 2¿ì»ó 2¿ìÇÏ
+	int anime = 5;
 	bool b3 = false;
 };
 std::vector <NEMO> nemo;
@@ -165,25 +166,75 @@ GLvoid Timer(int value) {
 	if (is2) {
 		for (int i = 0; i < nemo.size(); i++) {
 			if (nemo[i].b2 == 0) {
-				nemo[i].x -= 0.01f;
+				if(nemo[i].anime == 5)nemo[i].x -= 0.01f;
 				if (nemo[i].x - nemo[i].size <= -1.0f) {
-					nemo[i].y += nemo[i].size*2;
-					if (nemo[i].y + nemo[i].size >= 1.0f) {
-						nemo[i].y = 1.0f - nemo[i].size;
-						nemo[i].b2 = 3;
+					if(nemo[i].anime == 5)nemo[i].anime = 0;
+					if (nemo[i].anime < 5) {
+						nemo[i].y += (nemo[i].size * 2) / 5;
+						nemo[i].anime++;
+						if (nemo[i].y + nemo[i].size >= 1.0f) {
+							nemo[i].y = 1.0f - nemo[i].size;
+							nemo[i].b2 = 3;
+							nemo[i].anime = 5;
+							continue;
+						}
+						if(nemo[i].anime !=5)continue;
 					}
-					else nemo[i].b2 = 2;
+					nemo[i].b2 = 2;
 				}
 			}
 			if(nemo[i].b2 == 1){
-				nemo[i].x -= 0.01f;
+				if (nemo[i].anime == 5)nemo[i].x -= 0.01f;
 				if (nemo[i].x - nemo[i].size <= -1.0f) {
-					nemo[i].y -= nemo[i].size*2;
-					if (nemo[i].y - nemo[i].size <= -1.0f) {
-						nemo[i].y = -1.0f+nemo[i].size;
-						nemo[i].b2 = 2;
+					if (nemo[i].anime == 5)nemo[i].anime = 0;
+					if (nemo[i].anime < 5) {
+						nemo[i].y -= (nemo[i].size * 2) / 5;
+						nemo[i].anime++;
+						if (nemo[i].y - nemo[i].size <= -1.0f) {
+							nemo[i].y = -1.0f + nemo[i].size;
+							nemo[i].b2 = 2;
+							nemo[i].anime = 5;
+							continue;
+						}
+						if (nemo[i].anime != 5)continue;
 					}
-					else nemo[i].b2 = 3;
+					nemo[i].b2 = 3;
+				}
+			}
+			if(nemo[i].b2 == 2){
+				if (nemo[i].anime == 5)nemo[i].x += 0.01f;
+				if (nemo[i].x + nemo[i].size >= 1.0f) {
+					if (nemo[i].anime == 5)nemo[i].anime = 0;
+					if (nemo[i].anime < 5) {
+						nemo[i].y += (nemo[i].size * 2)/5;
+						nemo[i].anime++;
+						if (nemo[i].y + nemo[i].size >= 1.0f) {
+							nemo[i].y = 1.0f - nemo[i].size;
+							nemo[i].b2 = 1;
+							nemo[i].anime = 5;
+							continue;
+						}
+						if (nemo[i].anime != 5)continue;
+					}
+					nemo[i].b2 = 0;
+				}
+			}
+			if(nemo[i].b2 == 3){
+				if (nemo[i].anime == 5)nemo[i].x += 0.01f;
+				if (nemo[i].x + nemo[i].size >= 1.0f) {
+					if (nemo[i].anime == 5)nemo[i].anime = 0;
+					if (nemo[i].anime < 5) {
+						nemo[i].y -= (nemo[i].size * 2) / 5;
+						nemo[i].anime++;
+						if (nemo[i].y - nemo[i].size <= -1.0f) {
+							nemo[i].y = -1.0f + nemo[i].size;
+							nemo[i].b2 = 0;
+							nemo[i].anime = 5;
+							continue;
+						}
+						if (nemo[i].anime != 5)continue;
+					}
+					nemo[i].b2 = 1;
 				}
 			}
 		}

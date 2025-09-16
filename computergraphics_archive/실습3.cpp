@@ -172,7 +172,9 @@ GLvoid MouseMove(int x, int y) {
 
 			}
 			if ((nemo[MoveNemo].x1 > nemo[i].x1 && nemo[MoveNemo].x1 < nemo[i].x2 && nemo[MoveNemo].y1 < nemo[i].y1 && nemo[MoveNemo].y1 > nemo[i].y2 ||
-				nemo[MoveNemo].x2 > nemo[i].x1 && nemo[MoveNemo].x2 < nemo[i].x2 && nemo[MoveNemo].y2 < nemo[i].y2 && nemo[MoveNemo].y1 > nemo[i].y2 )&&i != MoveNemo)
+				nemo[MoveNemo].x2 > nemo[i].x1 && nemo[MoveNemo].x2 < nemo[i].x2 && nemo[MoveNemo].y2 < nemo[i].y1 && nemo[MoveNemo].y1 > nemo[i].y2 ||
+				nemo[MoveNemo].x1 > nemo[i].x1 && nemo[MoveNemo].x1 < nemo[i].x2&& nemo[MoveNemo].y2 < nemo[i].y1 && nemo[MoveNemo].y1 > nemo[i].y2||
+				nemo[MoveNemo].x2 > nemo[i].x1 && nemo[MoveNemo].x2 < nemo[i].x2&& nemo[MoveNemo].y1 < nemo[i].y1 && nemo[MoveNemo].y1 > nemo[i].y2)&&i != MoveNemo)
 			{
 				AddNemo = i;
 				isAdd = true;
