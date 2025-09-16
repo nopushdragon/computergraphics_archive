@@ -20,6 +20,7 @@ GLvoid Timer(int value);
 GLvoid Mouse(int button, int state, int x, int y);
 GLvoid MouseMove(int x, int y);
 GLvoid StopMove(int x, int y);
+GLvoid Keyboard(unsigned char key, int x, int y);
 
 void init();
 
@@ -37,6 +38,8 @@ float startX, startY;
 float rr = randcolor(rd);
 float rg = randcolor(rd);
 float rb = randcolor(rd);
+
+float leftx,rightx,topy,bottomy;
 
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 {
@@ -61,6 +64,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 	glutDisplayFunc(drawScene); // 출력 함수의 지정
 	glutReshapeFunc(Reshape); // 다시 그리기 함수 지정
 	glutTimerFunc(1000 / TimerSpeed, Timer, 1); //--- 타이머 콜백함수 지정 (60 FPS)
+	glutKeyboardFunc(Keyboard);
 	glutMouseFunc(Mouse);
 	glutMotionFunc(MouseMove);
 	glutPassiveMotionFunc(StopMove);
@@ -82,11 +86,18 @@ GLvoid drawScene() { //--- 콜백 함수: 출력 콜백 함수 {
 		for (int i = 0; i < nemo.size(); i++)
 		{
 			if (i == AddNemo) {
-				float AddSize = (nemo[MoveNemo].x2 - nemo[MoveNemo].x1)/2;
+				if (nemo[AddNemo].x1 < nemo[MoveNemo].x1) leftx = nemo[AddNemo].x1;
+				else leftx = nemo[MoveNemo].x1;
+				if (nemo[AddNemo].x2 > nemo[MoveNemo].x2) rightx = nemo[AddNemo].x2;
+				else rightx = nemo[MoveNemo].x2;
+				if (nemo[AddNemo].y1 > nemo[MoveNemo].y1) topy = nemo[AddNemo].y1;
+				else topy = nemo[MoveNemo].y1;
+				if (nemo[AddNemo].y2 < nemo[MoveNemo].y2) bottomy = nemo[AddNemo].y2;
+				else bottomy = nemo[MoveNemo].y2;
+				
 
 				glColor3f(rr, rg, rb);
-				glRectf(nemo[i].x1 - AddSize, nemo[i].y1+ AddSize,
-					nemo[i].x2 + AddSize, nemo[i].y2 - AddSize);
+				glRectf(leftx, topy, rightx, bottomy);
 			}
 		}
 	}
@@ -99,13 +110,15 @@ GLvoid Reshape(int w, int h) { //--- 콜백 함수: 다시 그리기 콜백 함수 {
 }
 
 GLvoid Timer(int value) {
-	
+	while (nemo.size() > 30) {
+		nemo.pop_back();
+	}
+
 	glutTimerFunc(1000 / TimerSpeed, Timer, 1); //--- 타이머 콜백함수 지정 (60 FPS)
 	glutPostRedisplay();
 }
 
 GLvoid Mouse(int button, int state, int x, int y) {
-
 	float mx = (float)x / (SIZEW / 2) - 1.0f;
 	float my = (SIZEH - (float)y) / (SIZEH / 2) - 1.0f;
 
@@ -118,6 +131,23 @@ GLvoid Mouse(int button, int state, int x, int y) {
 				MoveNemo = i;
 				startX = mx;
 				startY = my;
+			}
+		}
+	}
+	else if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+		for (int i = 0; i < nemo.size(); i++)
+		{
+			if (mx > nemo[i].x1 && mx < nemo[i].x2 && my < nemo[i].y1 && my > nemo[i].y2)
+			{
+				std::uniform_real_distribution<float> distroyrd(0.05f, 0.1f);
+
+				nemo.erase(nemo.begin() + i);
+				for (int j = 0; j < 2;j++) {
+					float distroysize = distroyrd(rd);
+					float rx = randf(rd);
+					float ry = randf(rd);
+					nemo.push_back({ rx, ry, rx + distroysize, ry - distroysize, randcolor(rd), randcolor(rd), randcolor(rd) });
+				}
 			}
 		}
 	}
@@ -159,10 +189,8 @@ GLvoid MouseMove(int x, int y) {
 
 GLvoid StopMove(int x, int y) {
 	if (isAdd) {
-		float AddSize = (nemo[MoveNemo].x2 - nemo[MoveNemo].x1)/2;
 
-		nemo.push_back({ nemo[AddNemo].x1 - AddSize, nemo[AddNemo].y1 + AddSize,
-			nemo[AddNemo].x2 + AddSize, nemo[AddNemo].y2 - AddSize, rr, rg, rb });
+		nemo.push_back({ leftx, topy, rightx, bottomy, rr, rg, rb });
 
 		for(int i = nemo.size()-1;i >= 0;i--){
 			if (i == MoveNemo || i == AddNemo)
@@ -175,17 +203,16 @@ GLvoid StopMove(int x, int y) {
 	AddNemo = -1;
 }
 
-void init() {
-	for (int i = 0; i < 10;i++) {
+GLvoid Keyboard(unsigned char key, int x, int y) {
+	switch (key) {
+	case 'a':
 		float rx = randf(rd);
 		float ry = randf(rd);
 		nemo.push_back({ rx,ry, rx + 0.1f, ry - 0.1f, randcolor(rd), randcolor(rd), randcolor(rd) });
-		/*nemo[i].x1 = randf(rd);
-		nemo[i].y1 = randf(rd);
-		nemo[i].x2 = nemo[i].x1 + 0.1f;
-		nemo[i].y2 = nemo[i].y1 - 0.1f;
-		nemo[i].r = randcolor(rd);
-		nemo[i].g = randcolor(rd);
-		nemo[i].b = randcolor(rd);*/
+		break;
 	}
+
+}
+
+void init() {
 }
