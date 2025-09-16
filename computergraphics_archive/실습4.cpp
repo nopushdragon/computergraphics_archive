@@ -26,6 +26,8 @@ struct NEMO {
 	float x, y;
 	float size;
 	float r, g, b;
+	int b1 = 0; //0ÁÂ»ó 1ÁÂÇÏ 2¿ì»ó 2¿ìÇÏ
+	int b2 = 0 //0ÁÂ»ó 1ÁÂÇÏ 2¿ì»ó 2¿ìÇÏ
 	bool b3 = false;
 };
 std::vector <NEMO> nemo;
@@ -132,6 +134,60 @@ GLvoid Timer(int value) {
 		nemo.pop_back();
 	}
 	
+	if (is1) {
+		for (int i = 0; i < nemo.size(); i++) {
+			if (nemo[i].b1 == 0) {
+				nemo[i].x -= 0.01f;
+				nemo[i].y += 0.01f;
+				if (nemo[i].x - nemo[i].size <= -1.0f) nemo[i].b1 = 2;
+				if (nemo[i].y + nemo[i].size >= 1.0f) nemo[i].b1 = 1;
+			}
+			if(nemo[i].b1 == 1){
+				nemo[i].x -= 0.01f;
+				nemo[i].y -= 0.01f;
+				if (nemo[i].x - nemo[i].size <= -1.0f) nemo[i].b1 = 3;
+				if (nemo[i].y - nemo[i].size <= -1.0f) nemo[i].b1 = 0;
+			}
+			if(nemo[i].b1 == 2){
+				nemo[i].x += 0.01f;
+				nemo[i].y += 0.01f;
+				if (nemo[i].x + nemo[i].size >= 1.0f) nemo[i].b1 = 0;
+				if (nemo[i].y + nemo[i].size >= 1.0f) nemo[i].b1 = 3;
+			}
+			if(nemo[i].b1 == 3){
+				nemo[i].x += 0.01f;
+				nemo[i].y -= 0.01f;
+				if (nemo[i].x + nemo[i].size >= 1.0f) nemo[i].b1 = 1;
+				if (nemo[i].y - nemo[i].size <= -1.0f) nemo[i].b1 = 2;
+			}
+		}
+	}
+	if (is2) {
+		for (int i = 0; i < nemo.size(); i++) {
+			if (nemo[i].b2 == 0) {
+				nemo[i].x -= 0.01f;
+				if (nemo[i].x - nemo[i].size <= -1.0f) {
+					nemo[i].y += nemo[i].size*2;
+					if (nemo[i].y + nemo[i].size >= 1.0f) {
+						nemo[i].y = 1.0f - nemo[i].size;
+						nemo[i].b2 = 3;
+					}
+					else nemo[i].b2 = 2;
+				}
+			}
+			if(nemo[i].b2 == 1){
+				nemo[i].x -= 0.01f;
+				if (nemo[i].x - nemo[i].size <= -1.0f) {
+					nemo[i].y -= nemo[i].size*2;
+					if (nemo[i].y - nemo[i].size <= -1.0f) {
+						nemo[i].y = -1.0f+nemo[i].size;
+						nemo[i].b2 = 2;
+					}
+					else nemo[i].b2 = 3;
+				}
+			}
+		}
+	}
 	if (is3) {
 		for (int i = 0; i < nemo.size(); i++) {
 			std::uniform_real_distribution<float> rdsize(0.005f, 0.02f);
