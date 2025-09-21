@@ -5,9 +5,14 @@
 
 #define SIZEW 800
 #define SIZEH 800
+#define TimerSpeed 60 //--- 타이머 속도 설정 (60 FPS)
 
 GLvoid drawScene(GLvoid);
 GLvoid Reshape(int w, int h);
+GLvoid Timer(int value);
+GLvoid Mouse(int button, int state, int x, int y);
+GLvoid MouseMove(int x, int y);
+GLvoid Keyboard(unsigned char key, int x, int y);
 
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 {	 
@@ -29,6 +34,10 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 
 	glutDisplayFunc(drawScene); // 출력 함수의 지정
 	glutReshapeFunc(Reshape); // 다시 그리기 함수 지정
+	glutTimerFunc(1000 / TimerSpeed, Timer, 1); //--- 타이머 콜백함수 지정 (60 FPS)
+	glutMouseFunc(Mouse);
+	glutMotionFunc(MouseMove);
+	glutKeyboardFunc(Keyboard);
 	glutMainLoop(); // 이벤트 처리 시작
 }
 

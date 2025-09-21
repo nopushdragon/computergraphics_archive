@@ -4,6 +4,10 @@
 #include <gl/freeglut_ext.h>
 #include <vector>
 #include <random>
+#include <deque>
+
+std::deque<std::pair<float, float>> path;  // 머리 이동 기록 저장
+int delay = 20;  // 블록마다 지연 프레임 수
 
 #define SIZEW 800
 #define SIZEH 800
@@ -33,7 +37,7 @@ struct NEMO {
 };
 std::vector <NEMO> nemo;
 bool is1 = false, is2 = false, is3 = false, is4 = false, is5 = false;
-
+bool followMode = false;
 
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 {
@@ -91,14 +95,17 @@ GLvoid Keyboard(unsigned char key, int x, int y) {
 	case '3':
 		init(is3);
 		is3 = !is3;
+		followMode = !followMode;
 		break;
 	case '4':
 		init(is4);
 		is4 = !is4;
+		followMode = !followMode;
 		break;
 	case'5':
-		init(is5);
-		is5 = !is5;
+		/*init(is5);
+		is5 = !is5;*/
+		followMode = !followMode;
 		break;
 	case's':
 		init(NULL);
@@ -134,131 +141,244 @@ GLvoid Timer(int value) {
 	while (nemo.size() > 5) {
 		nemo.pop_back();
 	}
-	
-	if (is1) {
-		for (int i = 0; i < nemo.size(); i++) {
-			if (nemo[i].b1 == 0) {
-				nemo[i].x -= 0.01f;
-				nemo[i].y += 0.01f;
-				if (nemo[i].x - nemo[i].size <= -1.0f) nemo[i].b1 = 2;
-				if (nemo[i].y + nemo[i].size >= 1.0f) nemo[i].b1 = 1;
-			}
-			if(nemo[i].b1 == 1){
-				nemo[i].x -= 0.01f;
-				nemo[i].y -= 0.01f;
-				if (nemo[i].x - nemo[i].size <= -1.0f) nemo[i].b1 = 3;
-				if (nemo[i].y - nemo[i].size <= -1.0f) nemo[i].b1 = 0;
-			}
-			if(nemo[i].b1 == 2){
-				nemo[i].x += 0.01f;
-				nemo[i].y += 0.01f;
-				if (nemo[i].x + nemo[i].size >= 1.0f) nemo[i].b1 = 0;
-				if (nemo[i].y + nemo[i].size >= 1.0f) nemo[i].b1 = 3;
-			}
-			if(nemo[i].b1 == 3){
-				nemo[i].x += 0.01f;
-				nemo[i].y -= 0.01f;
-				if (nemo[i].x + nemo[i].size >= 1.0f) nemo[i].b1 = 1;
-				if (nemo[i].y - nemo[i].size <= -1.0f) nemo[i].b1 = 2;
-			}
-		}
-	}
-	if (is2) {
-		for (int i = 0; i < nemo.size(); i++) {
-			if (nemo[i].b2 == 0) {
-				if(nemo[i].anime == 5)nemo[i].x -= 0.01f;
-				if (nemo[i].x - nemo[i].size <= -1.0f) {
-					if(nemo[i].anime == 5)nemo[i].anime = 0;
-					if (nemo[i].anime < 5) {
-						nemo[i].y += (nemo[i].size * 2) / 5;
-						nemo[i].anime++;
-						if (nemo[i].y + nemo[i].size >= 1.0f) {
-							nemo[i].y = 1.0f - nemo[i].size;
-							nemo[i].b2 = 3;
-							nemo[i].anime = 5;
-							continue;
-						}
-						if(nemo[i].anime !=5)continue;
-					}
-					nemo[i].b2 = 2;
-				}
-			}
-			if(nemo[i].b2 == 1){
-				if (nemo[i].anime == 5)nemo[i].x -= 0.01f;
-				if (nemo[i].x - nemo[i].size <= -1.0f) {
-					if (nemo[i].anime == 5)nemo[i].anime = 0;
-					if (nemo[i].anime < 5) {
-						nemo[i].y -= (nemo[i].size * 2) / 5;
-						nemo[i].anime++;
-						if (nemo[i].y - nemo[i].size <= -1.0f) {
-							nemo[i].y = -1.0f + nemo[i].size;
-							nemo[i].b2 = 2;
-							nemo[i].anime = 5;
-							continue;
-						}
-						if (nemo[i].anime != 5)continue;
-					}
-					nemo[i].b2 = 3;
-				}
-			}
-			if(nemo[i].b2 == 2){
-				if (nemo[i].anime == 5)nemo[i].x += 0.01f;
-				if (nemo[i].x + nemo[i].size >= 1.0f) {
-					if (nemo[i].anime == 5)nemo[i].anime = 0;
-					if (nemo[i].anime < 5) {
-						nemo[i].y += (nemo[i].size * 2)/5;
-						nemo[i].anime++;
-						if (nemo[i].y + nemo[i].size >= 1.0f) {
-							nemo[i].y = 1.0f - nemo[i].size;
-							nemo[i].b2 = 1;
-							nemo[i].anime = 5;
-							continue;
-						}
-						if (nemo[i].anime != 5)continue;
-					}
-					nemo[i].b2 = 0;
-				}
-			}
-			if(nemo[i].b2 == 3){
-				if (nemo[i].anime == 5)nemo[i].x += 0.01f;
-				if (nemo[i].x + nemo[i].size >= 1.0f) {
-					if (nemo[i].anime == 5)nemo[i].anime = 0;
-					if (nemo[i].anime < 5) {
-						nemo[i].y -= (nemo[i].size * 2) / 5;
-						nemo[i].anime++;
-						if (nemo[i].y - nemo[i].size <= -1.0f) {
-							nemo[i].y = -1.0f + nemo[i].size;
-							nemo[i].b2 = 0;
-							nemo[i].anime = 5;
-							continue;
-						}
-						if (nemo[i].anime != 5)continue;
-					}
-					nemo[i].b2 = 1;
-				}
-			}
-		}
-	}
-	if (is3) {
-		for (int i = 0; i < nemo.size(); i++) {
-			std::uniform_real_distribution<float> rdsize(0.005f, 0.02f);
-			float addsize = rdsize(mt);
 
-			if (nemo[i].b3 == false) {
-				nemo[i].size += addsize;
-				if (nemo[i].size >= 0.2f) nemo[i].b3 = true;
-			}
-			else {
-				nemo[i].size -= addsize;
-				if (nemo[i].size <= 0.01f) nemo[i].b3 = false;
+	if (followMode) {
+		if (!nemo.empty()) {
+			path.push_front({ nemo[0].x, nemo[0].y });
+			while (path.size() > (nemo.size() - 1) * delay + 1) {
+				path.pop_back();
 			}
 		}
 	}
-	else if (is4) {
-		for (int i = 0; i < nemo.size(); i++) {
-			nemo[i].r = randcolor(mt);
-			nemo[i].g = randcolor(mt);
-			nemo[i].b = randcolor(mt);
+
+	if (!followMode) {
+		if (is1) {
+			for (int i = 0; i < nemo.size(); i++) {
+				if (nemo[i].b1 == 0) {
+					nemo[i].x -= 0.01f;
+					nemo[i].y += 0.01f;
+					if (nemo[i].x - nemo[i].size <= -1.0f) nemo[i].b1 = 2;
+					if (nemo[i].y + nemo[i].size >= 1.0f) nemo[i].b1 = 1;
+				}
+				if (nemo[i].b1 == 1) {
+					nemo[i].x -= 0.01f;
+					nemo[i].y -= 0.01f;
+					if (nemo[i].x - nemo[i].size <= -1.0f) nemo[i].b1 = 3;
+					if (nemo[i].y - nemo[i].size <= -1.0f) nemo[i].b1 = 0;
+				}
+				if (nemo[i].b1 == 2) {
+					nemo[i].x += 0.01f;
+					nemo[i].y += 0.01f;
+					if (nemo[i].x + nemo[i].size >= 1.0f) nemo[i].b1 = 0;
+					if (nemo[i].y + nemo[i].size >= 1.0f) nemo[i].b1 = 3;
+				}
+				if (nemo[i].b1 == 3) {
+					nemo[i].x += 0.01f;
+					nemo[i].y -= 0.01f;
+					if (nemo[i].x + nemo[i].size >= 1.0f) nemo[i].b1 = 1;
+					if (nemo[i].y - nemo[i].size <= -1.0f) nemo[i].b1 = 2;
+				}
+			}
+		}
+		if (is2) {
+			for (int i = 0; i < nemo.size(); i++) {
+				if (nemo[i].b2 == 0) {
+					if (nemo[i].anime == 5)nemo[i].x -= 0.01f;
+					if (nemo[i].x - nemo[i].size <= -1.0f) {
+						if (nemo[i].anime == 5)nemo[i].anime = 0;
+						if (nemo[i].anime < 5) {
+							nemo[i].y += (nemo[i].size * 2) / 5;
+							nemo[i].anime++;
+							if (nemo[i].y + nemo[i].size >= 1.0f) {
+								nemo[i].y = 1.0f - nemo[i].size;
+								nemo[i].b2 = 3;
+								nemo[i].anime = 5;
+								continue;
+							}
+							if (nemo[i].anime != 5)continue;
+						}
+						nemo[i].b2 = 2;
+					}
+				}
+				if (nemo[i].b2 == 1) {
+					if (nemo[i].anime == 5)nemo[i].x -= 0.01f;
+					if (nemo[i].x - nemo[i].size <= -1.0f) {
+						if (nemo[i].anime == 5)nemo[i].anime = 0;
+						if (nemo[i].anime < 5) {
+							nemo[i].y -= (nemo[i].size * 2) / 5;
+							nemo[i].anime++;
+							if (nemo[i].y - nemo[i].size <= -1.0f) {
+								nemo[i].y = -1.0f + nemo[i].size;
+								nemo[i].b2 = 2;
+								nemo[i].anime = 5;
+								continue;
+							}
+							if (nemo[i].anime != 5)continue;
+						}
+						nemo[i].b2 = 3;
+					}
+				}
+				if (nemo[i].b2 == 2) {
+					if (nemo[i].anime == 5)nemo[i].x += 0.01f;
+					if (nemo[i].x + nemo[i].size >= 1.0f) {
+						if (nemo[i].anime == 5)nemo[i].anime = 0;
+						if (nemo[i].anime < 5) {
+							nemo[i].y += (nemo[i].size * 2) / 5;
+							nemo[i].anime++;
+							if (nemo[i].y + nemo[i].size >= 1.0f) {
+								nemo[i].y = 1.0f - nemo[i].size;
+								nemo[i].b2 = 1;
+								nemo[i].anime = 5;
+								continue;
+							}
+							if (nemo[i].anime != 5)continue;
+						}
+						nemo[i].b2 = 0;
+					}
+				}
+				if (nemo[i].b2 == 3) {
+					if (nemo[i].anime == 5)nemo[i].x += 0.01f;
+					if (nemo[i].x + nemo[i].size >= 1.0f) {
+						if (nemo[i].anime == 5)nemo[i].anime = 0;
+						if (nemo[i].anime < 5) {
+							nemo[i].y -= (nemo[i].size * 2) / 5;
+							nemo[i].anime++;
+							if (nemo[i].y - nemo[i].size <= -1.0f) {
+								nemo[i].y = -1.0f + nemo[i].size;
+								nemo[i].b2 = 0;
+								nemo[i].anime = 5;
+								continue;
+							}
+							if (nemo[i].anime != 5)continue;
+						}
+						nemo[i].b2 = 1;
+					}
+				}
+			}
+		}
+		if (is3) {
+			for (int i = 0; i < nemo.size(); i++) {
+				std::uniform_real_distribution<float> rdsize(0.005f, 0.02f);
+				float addsize = rdsize(mt);
+
+				if (nemo[i].b3 == false) {
+					nemo[i].size += addsize;
+					if (nemo[i].size >= 0.2f) nemo[i].b3 = true;
+				}
+				else {
+					nemo[i].size -= addsize;
+					if (nemo[i].size <= 0.01f) nemo[i].b3 = false;
+				}
+			}
+		}
+		if (is4) {
+			for (int i = 0; i < nemo.size(); i++) {
+				nemo[i].r = randcolor(mt);
+				nemo[i].g = randcolor(mt);
+				nemo[i].b = randcolor(mt);
+			}
+		}
+	}
+	else {
+		if (is1) {
+			if (nemo[0].b1 == 0) {
+				nemo[0].x -= 0.01f;
+				nemo[0].y += 0.01f;
+				if (nemo[0].x - nemo[0].size <= -1.0f) nemo[0].b1 = 2;
+				if (nemo[0].y + nemo[0].size >= 1.0f) nemo[0].b1 = 1;
+			}
+			if (nemo[0].b1 == 1) {
+				nemo[0].x -= 0.01f;
+				nemo[0].y -= 0.01f;
+				if (nemo[0].x - nemo[0].size <= -1.0f) nemo[0].b1 = 3;
+				if (nemo[0].y - nemo[0].size <= -1.0f) nemo[0].b1 = 0;
+			}
+			if (nemo[0].b1 == 2) {
+				nemo[0].x += 0.01f;
+				nemo[0].y += 0.01f;
+				if (nemo[0].x + nemo[0].size >= 1.0f) nemo[0].b1 = 0;
+				if (nemo[0].y + nemo[0].size >= 1.0f) nemo[0].b1 = 3;
+			}
+			if (nemo[0].b1 == 3) {
+				nemo[0].x += 0.01f;
+				nemo[0].y -= 0.01f;
+				if (nemo[0].x + nemo[0].size >= 1.0f) nemo[0].b1 = 1;
+				if (nemo[0].y - nemo[0].size <= -1.0f) nemo[0].b1 = 2;
+			}
+		}
+		if (is2) {
+			if (nemo[0].b2 == 0) {
+				if (nemo[0].anime == 5) nemo[0].x -= 0.01f;
+				if (nemo[0].x - nemo[0].size <= -1.0f) {
+					if (nemo[0].anime == 5) nemo[0].anime = 0;
+					if (nemo[0].anime < 5) {
+						nemo[0].y += (nemo[0].size * 2) / 5;
+						nemo[0].anime++;
+						if (nemo[0].y + nemo[0].size >= 1.0f) {
+							nemo[0].y = 1.0f - nemo[0].size;
+							nemo[0].b2 = 3;
+							nemo[0].anime = 5;
+						}
+						else if (nemo[0].anime == 5) nemo[0].b2 = 2;
+					}
+				}
+			}
+			else if (nemo[0].b2 == 1) {
+				if (nemo[0].anime == 5) nemo[0].x -= 0.01f;
+				if (nemo[0].x - nemo[0].size <= -1.0f) {
+					if (nemo[0].anime == 5) nemo[0].anime = 0;
+					if (nemo[0].anime < 5) {
+						nemo[0].y -= (nemo[0].size * 2) / 5;
+						nemo[0].anime++;
+						if (nemo[0].y - nemo[0].size <= -1.0f) {
+							nemo[0].y = -1.0f + nemo[0].size;
+							nemo[0].b2 = 2;
+							nemo[0].anime = 5;
+						}
+						else if (nemo[0].anime == 5) nemo[0].b2 = 3;
+					}
+				}
+			}
+			else if (nemo[0].b2 == 2) {
+				if (nemo[0].anime == 5) nemo[0].x += 0.01f;
+				if (nemo[0].x + nemo[0].size >= 1.0f) {
+					if (nemo[0].anime == 5) nemo[0].anime = 0;
+					if (nemo[0].anime < 5) {
+						nemo[0].y += (nemo[0].size * 2) / 5;
+						nemo[0].anime++;
+						if (nemo[0].y + nemo[0].size >= 1.0f) {
+							nemo[0].y = 1.0f - nemo[0].size;
+							nemo[0].b2 = 1;
+							nemo[0].anime = 5;
+						}
+						else if (nemo[0].anime == 5) nemo[0].b2 = 0;
+					}
+				}
+			}
+			else if (nemo[0].b2 == 3) {
+				if (nemo[0].anime == 5) nemo[0].x += 0.01f;
+				if (nemo[0].x + nemo[0].size >= 1.0f) {
+					if (nemo[0].anime == 5) nemo[0].anime = 0;
+					if (nemo[0].anime < 5) {
+						nemo[0].y -= (nemo[0].size * 2) / 5;
+						nemo[0].anime++;
+						if (nemo[0].y - nemo[0].size <= -1.0f) {
+							nemo[0].y = -1.0f + nemo[0].size;
+							nemo[0].b2 = 0;
+							nemo[0].anime = 5;
+						}
+						else if (nemo[0].anime == 5) nemo[0].b2 = 1;
+					}
+				}
+			}
+		}
+
+		for (int i = 1; i < nemo.size(); i++) {
+			int way = i * delay;
+			if (way < path.size()) {
+				nemo[i].x = path[way].first;
+				nemo[i].y = path[way].second;
+			}
 		}
 	}
 
