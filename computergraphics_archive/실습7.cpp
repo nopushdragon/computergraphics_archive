@@ -92,6 +92,8 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수 {
 			while (!arrive) {
 				if (nemo[i].x > board[i].x - 0.01f && nemo[i].x < board[i].x + 0.01f &&
 					nemo[i].y > board[i].y - 0.01f && nemo[i].y < board[i].y + 0.01f) {
+					nemo[i].x = board[i].x;
+					nemo[i].y = board[i].y;
 					arrive = true;
 				}
 				else {

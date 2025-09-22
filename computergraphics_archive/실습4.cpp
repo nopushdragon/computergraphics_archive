@@ -305,6 +305,13 @@ GLvoid Timer(int value) {
 				if (nemo[0].x + nemo[0].size >= 1.0f) nemo[0].b1 = 1;
 				if (nemo[0].y - nemo[0].size <= -1.0f) nemo[0].b1 = 2;
 			}
+			for (int i = 1; i < nemo.size(); i++) {
+				int way = i * delay;
+				if (way < path.size()) {
+					nemo[i].x = path[way].first;
+					nemo[i].y = path[way].second;
+				}
+			}
 		}
 		if (is2) {
 			if (nemo[0].b2 == 0) {
@@ -371,13 +378,35 @@ GLvoid Timer(int value) {
 					}
 				}
 			}
+			for (int i = 1; i < nemo.size(); i++) {
+				int way = i * delay;
+				if (way < path.size()) {
+					nemo[i].x = path[way].first;
+					nemo[i].y = path[way].second;
+				}
+			}
 		}
+		if (is3) {
+			for (int i = 0; i < nemo.size(); i++) {
+				std::uniform_real_distribution<float> rdsize(0.005f, 0.02f);
+				float addsize = rdsize(mt);
 
-		for (int i = 1; i < nemo.size(); i++) {
-			int way = i * delay;
-			if (way < path.size()) {
-				nemo[i].x = path[way].first;
-				nemo[i].y = path[way].second;
+				if (nemo[i].b3 == false) {
+					nemo[i].size += addsize;
+					if (nemo[i].size >= 0.2f) nemo[i].b3 = true;
+				}
+				else {
+					nemo[i].size -= addsize;
+					if (nemo[i].size <= 0.01f) nemo[i].b3 = false;
+				}
+			}
+
+		}
+		if (is4) {
+			for (int i = 0; i < nemo.size(); i++) {
+				nemo[i].r = randcolor(mt);
+				nemo[i].g = randcolor(mt);
+				nemo[i].b = randcolor(mt);
 			}
 		}
 	}
