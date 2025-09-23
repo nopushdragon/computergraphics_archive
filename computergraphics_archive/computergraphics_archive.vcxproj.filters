@@ -66,8 +66,19 @@
     <ClCompile Include="실습7.cpp">
       <Filter>소스 파일\실습</Filter>
     </ClCompile>
+    <ClCompile Include="컴그셰이더코드.cpp">
+      <Filter>소스 파일\실습</Filter>
+    </ClCompile>
     <ClCompile Include="실습8.cpp">
       <Filter>소스 파일\실습</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="vertex.glsl">
+      <Filter>헤더 파일</Filter>
+    </None>
+    <None Include="fragment.glsl">
+      <Filter>헤더 파일</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -5,20 +5,12 @@
 #include <gl/glew.h>
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
-#include <random>
-
-std::random_device rd;
-std::mt19937 mt(rd());
-std::uniform_real_distribution<float> rdcolor(0.0f, 1.0f);
-
-
 
 void make_vertexShaders();
 void make_fragmentShaders();
 GLuint make_shaderProgram();
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
-GLvoid Mouse(int button, int state, int x, int y);
 
 //--- 필요한 변수 선언
 GLint width, height;
@@ -45,8 +37,6 @@ char* filetobuf(const char* file)
 	return buf; // Return the buffer
 }
 
-
-
 //--- 메인 함수
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 {
@@ -71,7 +61,6 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
-	glutMouseFunc(Mouse);
 
 	glutMainLoop();
 }
@@ -84,14 +73,14 @@ void make_vertexShaders()
 	//--- filetobuf: 사용자정의 함수로 텍스트를 읽어서 문자열에 저장하는 함수
 
 	vertexSource = filetobuf("vertex.glsl");
-	vertexShader = glCreateShader(GL_VERTEX_SHADER);
+		vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexSource, NULL);
 	glCompileShader(vertexShader);
 
 	GLint result;
 	GLchar errorLog[512];
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
-	if (!result)
+	if(!result)
 	{
 		glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
 		std::cerr << "ERROR: vertex shader 컴파일 실패\n" << errorLog << std::endl;
@@ -153,13 +142,9 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	bColor = 0.8;
 	glClearColor(rColor, gColor, bColor, 1.0f);
 
-	int vColorLocation = glGetUniformLocation(shaderProgramID, "outColor");
-	glUseProgram(shaderProgramID);
-	glUniform4f(vColorLocation, rdcolor(mt), rdcolor(mt), rdcolor(mt), 1.0);
-
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(shaderProgramID);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4); //--- 렌더링하기: 0번 인덱스에서 1개의 버텍스를 사용하여 점 그리기
+	glDrawArrays(GL_TRIANGLES, 0, 3); //--- 렌더링하기: 0번 인덱스에서 1개의 버텍스를 사용하여 점 그리기
 
 	glutSwapBuffers(); // 화면에 출력하기
 }
@@ -167,11 +152,4 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 {
 	glViewport(0, 0, w, h);
-}
-
-GLvoid Mouse(int button, int state, int x, int y) 
-{
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-		drawScene();
-	}
 }
