@@ -6,12 +6,11 @@
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
 #include <random>
+#include <vector>
 
 std::random_device rd;
 std::mt19937 mt(rd());
 std::uniform_real_distribution<float> rdcolor(0.0f, 1.0f);
-
-
 
 void make_vertexShaders();
 void make_fragmentShaders();
@@ -19,12 +18,35 @@ GLuint make_shaderProgram();
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 GLvoid Mouse(int button, int state, int x, int y);
+GLvoid Keyboard(unsigned char key, int x, int y);
+void InitBuffer();
 
 //--- 필요한 변수 선언
 GLint width, height;
 GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
+
+std::vector<GLfloat> dotver;
+std::vector<GLfloat> linever;
+std::vector<GLfloat> triver;
+std::vector<GLfloat> rectver;
+GLuint vao, vbo, ebo;
+
+// --- 정점 데이터 (사각형을 인덱스 방식으로 그리기)
+// 3개짜리 삼각형 2개로 사각형 구성 (x,y,z)
+//GLfloat vPositionList[] = {
+//	-0.5f,  0.5f, 0.0f,  // 0: 왼쪽 위
+//	-0.5f, -0.5f, 0.0f,  // 1: 왼쪽 아래
+//	 0.5f, -0.5f, 0.0f,  // 2: 오른쪽 아래
+//	 0.5f,  0.5f, 0.0f   // 3: 오른쪽 위
+//};
+
+// 인덱스 (두 개의 삼각형)
+//GLuint indexList[] = {
+//	0, 1, 2,  // 삼각형 1
+//	0, 2, 3   // 삼각형 2
+//};
 
 char* filetobuf(const char* file)
 {
@@ -45,9 +67,6 @@ char* filetobuf(const char* file)
 	return buf; // Return the buffer
 }
 
-
-
-//--- 메인 함수
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 {
 	width = 500;
@@ -69,9 +88,13 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 	make_fragmentShaders(); //--- 프래그먼트 세이더 만들기
 	shaderProgramID = make_shaderProgram();	//--- 세이더 프로그램 만들기
 
+	// 버퍼(VAO/VBO/EBO) 초기화 (셰이더 프로그램 생성 후 호출)
+	InitBuffer();
+
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
 	glutMouseFunc(Mouse);
+	glutKeyboardFunc(Keyboard);
 
 	glutMainLoop();
 }
@@ -147,21 +170,16 @@ GLuint make_shaderProgram()
 
 GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 {
-	GLfloat rColor, gColor, bColor;
-	rColor = 0.8;
-	gColor = 0.8;
-	bColor = 0.8;
-	glClearColor(rColor, gColor, bColor, 1.0f);
-
-	int vColorLocation = glGetUniformLocation(shaderProgramID, "outColor");
-	glUseProgram(shaderProgramID);
-	glUniform4f(vColorLocation, rdcolor(mt), rdcolor(mt), rdcolor(mt), 1.0);
-
+	glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	glUseProgram(shaderProgramID);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4); //--- 렌더링하기: 0번 인덱스에서 1개의 버텍스를 사용하여 점 그리기
 
-	glutSwapBuffers(); // 화면에 출력하기
+	glUseProgram(shaderProgramID);
+	glBindVertexArray(vao);
+
+	glDrawArrays(GL_TRIANGLES, 0, triver.size() / 6);
+
+	glBindVertexArray(0);
+	glutSwapBuffers();
 }
 
 GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
@@ -172,6 +190,84 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 GLvoid Mouse(int button, int state, int x, int y) 
 {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-		drawScene();
+		float mx = (2.0f * x / width) - 1.0f;
+		float my = 1.0f - (2.0f * y / height);
+
+		float size = 0.1f; // 삼각형 크기
+
+		// 클릭 지점 중심으로 삼각형 3개 정점 추가
+		triver.push_back(mx);
+		triver.push_back(my + size);
+		triver.push_back(0.0f);
+		triver.push_back(rdcolor(mt));
+		triver.push_back(rdcolor(mt));
+		triver.push_back(rdcolor(mt));
+
+		triver.push_back(mx - size);
+		triver.push_back(my - size);
+		triver.push_back(0.0f);
+		triver.push_back(rdcolor(mt));
+		triver.push_back(rdcolor(mt));
+		triver.push_back(rdcolor(mt));
+
+		triver.push_back(mx + size);
+		triver.push_back(my - size);
+		triver.push_back(0.0f);
+		triver.push_back(rdcolor(mt));
+		triver.push_back(rdcolor(mt));
+		triver.push_back(rdcolor(mt));
+
+
+
+		// VBO 갱신
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, triver.size() * sizeof(float), triver.data(), GL_DYNAMIC_DRAW);
+
+		glutPostRedisplay(); // 다시 그리기 요청
 	}
+}
+
+GLvoid Keyboard(unsigned char key, int x, int y)
+{
+	switch (key) {
+	case 'p':
+		break;
+	case 'l':
+		break;
+	case 't':
+		break;
+	case 'r':
+		break;
+	case 'c':
+		triver.clear();
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
+		glutPostRedisplay(); // 다시 그리기 요청
+		break;
+	case 'q':
+		exit(0);
+		break;
+	}
+}
+
+void InitBuffer()
+{
+	glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    // 초기에는 빈 버퍼
+    glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
+
+	// --- 위치 속성 (location = 0, vec3)
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	// --- 색상 속성 (location = 1, vec3)
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0);
 }

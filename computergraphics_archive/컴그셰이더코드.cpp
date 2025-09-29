@@ -5,18 +5,43 @@
 #include <gl/glew.h>
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
+#include <random>
+
+std::random_device rd;
+std::mt19937 mt(rd());
+std::uniform_real_distribution<float> rdcolor(0.0f, 1.0f);
 
 void make_vertexShaders();
 void make_fragmentShaders();
 GLuint make_shaderProgram();
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
+GLvoid Mouse(int button, int state, int x, int y);
+void InitBuffer();
 
 //--- 필요한 변수 선언
 GLint width, height;
 GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
+
+std::vector<GLfloat> vertices; // 모든 삼각형 좌표 저장
+GLuint vao, vbo, ebo;
+
+// --- 정점 데이터 (사각형을 인덱스 방식으로 그리기)
+// 3개짜리 삼각형 2개로 사각형 구성 (x,y,z)
+//GLfloat vPositionList[] = {
+//	-0.5f,  0.5f, 0.0f,  // 0: 왼쪽 위
+//	-0.5f, -0.5f, 0.0f,  // 1: 왼쪽 아래
+//	 0.5f, -0.5f, 0.0f,  // 2: 오른쪽 아래
+//	 0.5f,  0.5f, 0.0f   // 3: 오른쪽 위
+//};
+
+// 인덱스 (두 개의 삼각형)
+//GLuint indexList[] = {
+//	0, 1, 2,  // 삼각형 1
+//	0, 2, 3   // 삼각형 2
+//};
 
 char* filetobuf(const char* file)
 {
@@ -37,7 +62,6 @@ char* filetobuf(const char* file)
 	return buf; // Return the buffer
 }
 
-//--- 메인 함수
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 {
 	width = 500;
@@ -59,8 +83,12 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 	make_fragmentShaders(); //--- 프래그먼트 세이더 만들기
 	shaderProgramID = make_shaderProgram();	//--- 세이더 프로그램 만들기
 
+	// 버퍼(VAO/VBO/EBO) 초기화 (셰이더 프로그램 생성 후 호출)
+	InitBuffer();
+
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
+	glutMouseFunc(Mouse);
 
 	glutMainLoop();
 }
@@ -73,14 +101,14 @@ void make_vertexShaders()
 	//--- filetobuf: 사용자정의 함수로 텍스트를 읽어서 문자열에 저장하는 함수
 
 	vertexSource = filetobuf("vertex.glsl");
-		vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexSource, NULL);
 	glCompileShader(vertexShader);
 
 	GLint result;
 	GLchar errorLog[512];
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
-	if(!result)
+	if (!result)
 	{
 		glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
 		std::cerr << "ERROR: vertex shader 컴파일 실패\n" << errorLog << std::endl;
@@ -136,20 +164,65 @@ GLuint make_shaderProgram()
 
 GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 {
-	GLfloat rColor, gColor, bColor;
-	rColor = 0.8;
-	gColor = 0.8;
-	bColor = 0.8;
-	glClearColor(rColor, gColor, bColor, 1.0f);
-
+	glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	glUseProgram(shaderProgramID);
-	glDrawArrays(GL_TRIANGLES, 0, 3); //--- 렌더링하기: 0번 인덱스에서 1개의 버텍스를 사용하여 점 그리기
 
-	glutSwapBuffers(); // 화면에 출력하기
+	glUseProgram(shaderProgramID);
+	glBindVertexArray(vao);
+
+	glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 3);
+
+	glBindVertexArray(0);
+	glutSwapBuffers();
 }
 
 GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 {
 	glViewport(0, 0, w, h);
+}
+
+GLvoid Mouse(int button, int state, int x, int y)
+{
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		float mx = (2.0f * x / width) - 1.0f;
+		float my = 1.0f - (2.0f * y / height);
+
+		float size = 0.1f; // 삼각형 크기
+
+		// 클릭 지점 중심으로 삼각형 3개 정점 추가
+		vertices.push_back(mx);
+		vertices.push_back(my + size);
+		vertices.push_back(0.0f);
+
+		vertices.push_back(mx - size);
+		vertices.push_back(my - size);
+		vertices.push_back(0.0f);
+
+		vertices.push_back(mx + size);
+		vertices.push_back(my - size);
+		vertices.push_back(0.0f);
+
+		// VBO 갱신
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
+
+		glutPostRedisplay(); // 다시 그리기 요청
+	}
+}
+
+void InitBuffer()
+{
+	glGenVertexArrays(1, &vao);
+	glGenBuffers(1, &vbo);
+
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+	// 초기에는 빈 버퍼
+	glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(0);
 }
