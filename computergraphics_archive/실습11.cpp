@@ -43,6 +43,7 @@ float radius = 0.0f;
 float maxAngle = 0.0f;
 float g_direction = 1.0f;
 bool spotLine = false;
+float r = 0.0f, g = 0.0f, b = 0.0f;
 
 char* filetobuf(const char* file)
 {
@@ -186,7 +187,7 @@ void UpdateBuffer()
 
 GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 {
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(r, g, b, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glUseProgram(shaderProgramID);
@@ -212,6 +213,11 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 GLvoid Mouse(int button, int state, int x, int y)
 {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		std::uniform_real_distribution<float> rdcolor(0.0f, 1.0f);
+		r = rdcolor(mt);
+		g = rdcolor(mt);
+		b = rdcolor(mt);
+
 		float mx = (2.0f * x / width) - 1.0f;
 		float my = 1.0f - (2.0f * y / height);
 		
@@ -281,6 +287,7 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	case 'c':
 		shapes.clear();
 		UpdateBuffer();
+		spiralState = 0;
 		break;
 	case 'q':
 		exit(0);
