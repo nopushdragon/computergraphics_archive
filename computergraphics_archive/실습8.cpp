@@ -20,6 +20,7 @@ GLvoid Reshape(int w, int h);
 GLvoid Mouse(int button, int state, int x, int y);
 GLvoid Keyboard(unsigned char key, int x, int y);
 void InitBuffer();
+void Moveshape(float x, float y);
 
 //--- 필요한 변수 선언
 GLint width, height;
@@ -31,22 +32,10 @@ std::vector<GLfloat> dotver;
 std::vector<GLfloat> linever;
 std::vector<GLfloat> triver;
 std::vector<GLfloat> rectver;
-GLuint vao, vbo, ebo;
+GLuint vao, vbo;
 
-// --- 정점 데이터 (사각형을 인덱스 방식으로 그리기)
-// 3개짜리 삼각형 2개로 사각형 구성 (x,y,z)
-//GLfloat vPositionList[] = {
-//	-0.5f,  0.5f, 0.0f,  // 0: 왼쪽 위
-//	-0.5f, -0.5f, 0.0f,  // 1: 왼쪽 아래
-//	 0.5f, -0.5f, 0.0f,  // 2: 오른쪽 아래
-//	 0.5f,  0.5f, 0.0f   // 3: 오른쪽 위
-//};
-
-// 인덱스 (두 개의 삼각형)
-//GLuint indexList[] = {
-//	0, 1, 2,  // 삼각형 1
-//	0, 2, 3   // 삼각형 2
-//};
+int mode = 0; // 0: 점, 1: 선, 2: 삼각형, 3: 사각형
+int nowshape = -1;
 
 char* filetobuf(const char* file)
 {
@@ -168,6 +157,31 @@ GLuint make_shaderProgram()
 	return shaderID;
 }
 
+std::vector<GLfloat> allVertices;
+struct SHAPE {
+	int shape; // 0: 점, 1: 선, 2: 삼각형, 3: 사각형
+	std::vector<GLfloat> vertex;
+	float x, y;
+};
+std::vector<SHAPE> shapes;
+
+void UpdateBuffer()
+{
+	allVertices.clear();
+	for(int i = 0 ; i < shapes.size(); i++) 
+		if(shapes[i].shape == 0) allVertices.insert(allVertices.end(), shapes[i].vertex.begin(), shapes[i].vertex.end());
+	for (int i = 0; i < shapes.size(); i++) 
+		if (shapes[i].shape == 1) allVertices.insert(allVertices.end(), shapes[i].vertex.begin(), shapes[i].vertex.end());
+	for (int i = 0; i < shapes.size(); i++) 
+		if (shapes[i].shape == 2) allVertices.insert(allVertices.end(), shapes[i].vertex.begin(), shapes[i].vertex.end());
+	for (int i = 0; i < shapes.size(); i++) 
+		if (shapes[i].shape == 3) allVertices.insert(allVertices.end(), shapes[i].vertex.begin(), shapes[i].vertex.end());
+
+	// 합쳐진 데이터로 VBO 업데이트
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, allVertices.size() * sizeof(GLfloat), allVertices.data(), GL_DYNAMIC_DRAW);
+}
+
 GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 {
 	glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
@@ -176,7 +190,19 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	glUseProgram(shaderProgramID);
 	glBindVertexArray(vao);
 
-	glDrawArrays(GL_TRIANGLES, 0, triver.size() / 6);
+	GLint first = 0;
+	for (int i = 0; i < shapes.size(); i++) {
+		int vertexCount = shapes[i].vertex.size() / 6;
+
+		// 올바른 시작 위치(first)에서 그리기
+		if (shapes[i].shape == 0) glDrawArrays(GL_TRIANGLES, first, vertexCount);
+		else if (shapes[i].shape == 1) glDrawArrays(GL_LINES, first, vertexCount);
+		else if (shapes[i].shape == 2) glDrawArrays(GL_TRIANGLES, first, vertexCount);
+		else if (shapes[i].shape == 3) glDrawArrays(GL_TRIANGLES, first, vertexCount);
+
+		// 다음 도형을 위해 시작 위치 업데이트
+		first += vertexCount;
+	}
 
 	glBindVertexArray(0);
 	glutSwapBuffers();
@@ -193,61 +219,263 @@ GLvoid Mouse(int button, int state, int x, int y)
 		float mx = (2.0f * x / width) - 1.0f;
 		float my = 1.0f - (2.0f * y / height);
 
-		float size = 0.1f; // 삼각형 크기
+		static int shapeCount = 0;
+		if (shapeCount < 10) {
+			SHAPE newShape;
+			newShape.shape = mode;
+			newShape.x = mx;
+			newShape.y = my;
 
-		// 클릭 지점 중심으로 삼각형 3개 정점 추가
-		triver.push_back(mx);
-		triver.push_back(my + size);
-		triver.push_back(0.0f);
-		triver.push_back(rdcolor(mt));
-		triver.push_back(rdcolor(mt));
-		triver.push_back(rdcolor(mt));
+			float size = 0.1f; // 크기
+			if (mode == 0) {
+				float r = rdcolor(mt);
+				float g = rdcolor(mt);
+				float b = rdcolor(mt);
 
-		triver.push_back(mx - size);
-		triver.push_back(my - size);
-		triver.push_back(0.0f);
-		triver.push_back(rdcolor(mt));
-		triver.push_back(rdcolor(mt));
-		triver.push_back(rdcolor(mt));
+				newShape.vertex.push_back(mx - (size - 0.08f));
+				newShape.vertex.push_back(my + (size - 0.08f));
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(r);
+				newShape.vertex.push_back(g);
+				newShape.vertex.push_back(b);
 
-		triver.push_back(mx + size);
-		triver.push_back(my - size);
-		triver.push_back(0.0f);
-		triver.push_back(rdcolor(mt));
-		triver.push_back(rdcolor(mt));
-		triver.push_back(rdcolor(mt));
+				newShape.vertex.push_back(mx - (size - 0.08f));
+				newShape.vertex.push_back(my - (size - 0.08f));
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(r);
+				newShape.vertex.push_back(g);
+				newShape.vertex.push_back(b);
 
+				newShape.vertex.push_back(mx + (size - 0.08f));
+				newShape.vertex.push_back(my + (size - 0.08f));
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(r);
+				newShape.vertex.push_back(g);
+				newShape.vertex.push_back(b);
+				//2번쨰 삼각형	
+				newShape.vertex.push_back(mx - (size - 0.08f));
+				newShape.vertex.push_back(my - (size - 0.08f));
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(r);
+				newShape.vertex.push_back(g);
+				newShape.vertex.push_back(b);
 
+				newShape.vertex.push_back(mx + (size - 0.08f));
+				newShape.vertex.push_back(my - (size - 0.08f));
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(r);
+				newShape.vertex.push_back(g);
+				newShape.vertex.push_back(b);
 
-		// VBO 갱신
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, triver.size() * sizeof(float), triver.data(), GL_DYNAMIC_DRAW);
+				newShape.vertex.push_back(mx + (size - 0.08f));
+				newShape.vertex.push_back(my + (size - 0.08f));
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(r);
+				newShape.vertex.push_back(g);
+				newShape.vertex.push_back(b);
+			}
+			else if (mode == 1) {
+				// 클릭 지점 중심으로 수평선 추가
+				newShape.vertex.push_back(mx - size);
+				newShape.vertex.push_back(my);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
 
-		glutPostRedisplay(); // 다시 그리기 요청
+				newShape.vertex.push_back(mx + size);
+				newShape.vertex.push_back(my);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+			}
+			else if (mode == 2) {
+				// 클릭 지점 중심으로 삼각형 3개 정점 추가
+				newShape.vertex.push_back(mx);
+				newShape.vertex.push_back(my + size);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+
+				newShape.vertex.push_back(mx - size);
+				newShape.vertex.push_back(my - size);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+
+				newShape.vertex.push_back(mx + size);
+				newShape.vertex.push_back(my - size);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+			}
+			else if (mode == 3) {
+				newShape.vertex.push_back(mx - size);
+				newShape.vertex.push_back(my + size);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+
+				newShape.vertex.push_back(mx - size);
+				newShape.vertex.push_back(my - size);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+
+				newShape.vertex.push_back(mx + size);
+				newShape.vertex.push_back(my + size);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				//2번쨰 삼각형	
+				newShape.vertex.push_back(mx - size);
+				newShape.vertex.push_back(my - size);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+
+				newShape.vertex.push_back(mx + size);
+				newShape.vertex.push_back(my - size);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+
+				newShape.vertex.push_back(mx + size);
+				newShape.vertex.push_back(my + size);
+				newShape.vertex.push_back(0.0f);
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+				newShape.vertex.push_back(rdcolor(mt));
+			}
+			shapes.push_back(newShape);
+			shapeCount++;
+		}
+		else {
+			for(int i = 0 ; i < shapes.size() ; i++) {
+				float dx = shapes[i].x - mx;
+				float dy = shapes[i].y - my;
+				float dist = sqrt(dx * dx + dy * dy);
+				if(dist < 0.1f) {
+					nowshape = i;
+					break;
+				}
+			}
+		}
+		UpdateBuffer();
+
+		glutPostRedisplay();
 	}
 }
 
 GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
-	case 'p':
+	case '1':
+		mode = 0;
 		break;
-	case 'l':
+	case '2':
+		mode = 1;
 		break;
-	case 't':
+	case '3':
+		mode = 2;
 		break;
-	case 'r':
+	case '4':
+		mode = 3;
 		break;
 	case 'c':
-		triver.clear();
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
-		glutPostRedisplay(); // 다시 그리기 요청
+		shapes.clear();
+		UpdateBuffer();
+		break;
+	case 'w':
+		Moveshape(0.0f, 0.1f);
+		break;
+	case 'a':
+		Moveshape(-0.1f, 0.0f);
+		break;
+	case 's':
+		Moveshape(0.0f, -0.1f);
+		break;
+	case 'd':
+		Moveshape(0.1f, 0.0f);
+		break;
+	case 'i':
+		Moveshape(-0.1f, 0.1f);
+		break;
+	case 'j':
+		Moveshape(0.1f, 0.1f);
+		break;
+	case 'k':
+		Moveshape(-0.1f, -0.1f);
+		break;
+	case 'l':
+		Moveshape(0.1f, -0.1f);
 		break;
 	case 'q':
 		exit(0);
 		break;
 	}
+
+	glutPostRedisplay(); // 다시 그리기 요청
+}
+
+void Moveshape(float x, float y)
+{
+	shapes[nowshape].x += x;
+	shapes[nowshape].y += y;
+
+	if (shapes[nowshape].shape == 0) { // 점
+		shapes[nowshape].vertex[0] += x;
+		shapes[nowshape].vertex[1] += y;
+		shapes[nowshape].vertex[6] += x;
+		shapes[nowshape].vertex[7] += y;
+		shapes[nowshape].vertex[12] += x;
+		shapes[nowshape].vertex[13] += y;
+		shapes[nowshape].vertex[18] += x;
+		shapes[nowshape].vertex[19] += y;
+		shapes[nowshape].vertex[24] += x;
+		shapes[nowshape].vertex[25] += y;
+		shapes[nowshape].vertex[30] += x;
+		shapes[nowshape].vertex[31] += y;
+	}
+	else if (shapes[nowshape].shape == 1) { // 선
+		shapes[nowshape].vertex[0] += x;
+		shapes[nowshape].vertex[1] += y;
+		shapes[nowshape].vertex[6] += x;
+		shapes[nowshape].vertex[7] += y;
+	}
+	else if (shapes[nowshape].shape == 2) { // 삼각형
+		shapes[nowshape].vertex[0] += x;
+		shapes[nowshape].vertex[1] += y;
+		shapes[nowshape].vertex[6] += x;
+		shapes[nowshape].vertex[7] += y;
+		shapes[nowshape].vertex[12] += x;
+		shapes[nowshape].vertex[13] += y;
+	}
+	else if (shapes[nowshape].shape == 3) { // 사각형
+		shapes[nowshape].vertex[0] += x;
+		shapes[nowshape].vertex[1] += y;
+		shapes[nowshape].vertex[6] += x;
+		shapes[nowshape].vertex[7] += y;
+		shapes[nowshape].vertex[12] += x;
+		shapes[nowshape].vertex[13] += y;
+		shapes[nowshape].vertex[18] += x;
+		shapes[nowshape].vertex[19] += y;
+		shapes[nowshape].vertex[24] += x;
+		shapes[nowshape].vertex[25] += y;
+		shapes[nowshape].vertex[30] += x;
+		shapes[nowshape].vertex[31] += y;
+	}
+
+	UpdateBuffer();
 }
 
 void InitBuffer()
