@@ -232,7 +232,7 @@ GLvoid Mouse(int button, int state, int x, int y)
 		angle = 0.0f;
 		radius = 0.0f;
 		
-		maxAngle = 720.0f * (M_PI / 180.0f); // 720µµ
+		maxAngle = 1800.0f * (M_PI / 180.0f); // 720µµ
 	
 		makedots(mx, my);
 		for (int i = 0;i < maxspiral-1;i++) {
@@ -307,10 +307,12 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 GLvoid Timer(int value)
 {
 	static int dotTimer = 0;
+	std::uniform_real_distribution<float> rdangle(-0.003f, 0.005f);
 
 	if (spiralState == 1) {
+
 		angle += 0.05f;
-		radius += 0.0005f;
+		radius += rdangle(mt);
 
 		if (abs(angle) >= maxAngle) {
 			spiralState = 2;
@@ -322,7 +324,7 @@ GLvoid Timer(int value)
 	}
 	else if (spiralState == 2) { 
 		angle -= 0.05f;
-		radius -= 0.0005f;
+		radius -= rdangle(mt);
 
 		if (radius <= 0.0f) {
 			radius = 0.0f;
@@ -331,7 +333,7 @@ GLvoid Timer(int value)
 	}
 	else if (spiralState == 3) {
 		angle -= 0.05f;
-		radius += 0.0005f;
+		radius += rdangle(mt);
 
 		if (abs(angle) >= maxAngle) {
 			spiralState = 4;
@@ -343,7 +345,7 @@ GLvoid Timer(int value)
 	}
 	else if (spiralState == 4) {
 		angle += 0.05f;
-		radius -= 0.0005f;
+		radius -= rdangle(mt);
 
 		if (radius <= 0.0f) {
 			radius = 0.0f;
