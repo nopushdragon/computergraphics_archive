@@ -213,6 +213,13 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 GLvoid Mouse(int button, int state, int x, int y)
 {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		std::uniform_int_distribution<int> rdspiral(0,1);
+		int rdstate = rdspiral(mt);
+		if (rdstate == 0) spiralState = 1;
+		else spiralState = 3;
+
+		std::cout << spiralState << std::endl;
+
 		std::uniform_real_distribution<float> rdcolor(0.0f, 1.0f);
 		r = rdcolor(mt);
 		g = rdcolor(mt);
@@ -222,12 +229,11 @@ GLvoid Mouse(int button, int state, int x, int y)
 		float my = 1.0f - (2.0f * y / height);
 		
 		shapes.clear();
-		spiralState = 1;
 		angle = 0.0f;
 		radius = 0.0f;
 		
 		maxAngle = 720.0f * (M_PI / 180.0f); // 720도
-
+	
 		makedots(mx, my);
 		for (int i = 0;i < maxspiral-1;i++) {
 			std::uniform_real_distribution<float> rdxy(-1.0f, 1.0f);
@@ -323,6 +329,27 @@ GLvoid Timer(int value)
 			spiralState = 0; 
 		}
 	}
+	else if (spiralState == 3) {
+		angle -= 0.05f;
+		radius += 0.0005f;
+
+		if (abs(angle) >= maxAngle) {
+			spiralState = 4;
+			angle = -900.0f * (M_PI / 180.0f);
+			for (int i = 0; i < shapes.size(); i++) {
+				shapes[i].centerX += radius * 2;
+			}
+		}
+	}
+	else if (spiralState == 4) {
+		angle += 0.05f;
+		radius -= 0.0005f;
+
+		if (radius <= 0.0f) {
+			radius = 0.0f;
+			spiralState = 0;
+		}
+	}
 	
 	if (spotLine == 0) {
 		if (shapes.size() > 0) {
@@ -345,8 +372,6 @@ GLvoid Timer(int value)
 			}
 		}
 	}
-	
-
 
 	UpdateBuffer();
 	glutPostRedisplay();
