@@ -7,22 +7,21 @@
 #include <gl/freeglut_ext.h>
 #include <random>
 #include <vector>
-#include <cmath>
-#define M_PI 3.1415926535
 
 std::random_device rd;
 std::mt19937 mt(rd());
+std::uniform_real_distribution<float> rdcolor(0.0f, 1.0f);
+std::uniform_real_distribution<float> rdxy(-1.0f, 1.0f);
+std::uniform_real_distribution<float> rdmovexy(-0.01f, 0.1f);
 
 void make_vertexShaders();
 void make_fragmentShaders();
 GLuint make_shaderProgram();
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
-GLvoid Mouse(int button, int state, int x, int y);
 GLvoid Keyboard(unsigned char key, int x, int y);
-void InitBuffer();
 GLvoid Timer(int value);
-void makedots(float x, float y);
+void InitBuffer();
 
 //--- 필요한 변수 선언
 GLint width, height;
@@ -36,14 +35,19 @@ std::vector<GLfloat> triver;
 std::vector<GLfloat> rectver;
 GLuint vao, vbo;
 
-int maxspiral = 1;
-int spiralState = 0; // 0:정지, 1:퍼져나가는 중, 2:돌아오는 중
-float angle = 0.0f;
-float radius = 0.0f;
-float maxAngle = 0.0f;
-float g_direction = 1.0f;
-bool spotLine = false;
-float r = 0.0f, g = 0.0f, b = 0.0f;
+std::vector<GLfloat> allVertices;
+
+struct SHAPE {
+	std::vector<GLfloat> vertex;
+};
+std::vector<SHAPE> shapes;
+SHAPE make_triangle(float x1, float y1, float x2, float y2, float x3, float y3, float r, float g, float b);
+void resetShape();
+
+int moveState = 0; // 0: 정지, 1: 시계 2: 반시계
+bool changeSize = false;
+float radius = 1.0f;
+float centerX = 0.0f, centerY = 0.0f;
 
 char* filetobuf(const char* file)
 {
@@ -87,10 +91,10 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 
 	// 버퍼(VAO/VBO/EBO) 초기화 (셰이더 프로그램 생성 후 호출)
 	InitBuffer();
+	resetShape();
 
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
-	glutMouseFunc(Mouse);
 	glutKeyboardFunc(Keyboard);
 	glutTimerFunc(1000 / 120, Timer, 1); //--- 타이머 콜백함수 지정 (60 FPS)
 
@@ -166,19 +170,11 @@ GLuint make_shaderProgram()
 	return shaderID;
 }
 
-std::vector<GLfloat> allVertices;
-struct SHAPE {
-	std::vector<GLfloat> vertex;
-	float x, y;
-	float centerX, centerY;
-};
-std::vector<SHAPE> shapes;
-
 void UpdateBuffer()
 {
 	allVertices.clear();
-	for (int i = 0; i < shapes.size(); i++)
-		allVertices.insert(allVertices.end(), shapes[i].vertex.begin(), shapes[i].vertex.end());
+
+	for (int i = 0; i < shapes.size(); i++)	allVertices.insert(allVertices.end(), shapes[i].vertex.begin(), shapes[i].vertex.end());
 
 	// 합쳐진 데이터로 VBO 업데이트
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -187,7 +183,7 @@ void UpdateBuffer()
 
 GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 {
-	glClearColor(r, g, b, 1.0f);
+	glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glUseProgram(shaderProgramID);
@@ -196,8 +192,9 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	GLint first = 0;
 	for (int i = 0; i < shapes.size(); i++) {
 		int vertexCount = shapes[i].vertex.size() / 6;
-		
 		glDrawArrays(GL_TRIANGLES, first, vertexCount);
+
+		// 다음 도형을 위해 시작 위치 업데이트
 		first += vertexCount;
 	}
 
@@ -210,90 +207,41 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 	glViewport(0, 0, w, h);
 }
 
-GLvoid Mouse(int button, int state, int x, int y)
-{
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-		std::uniform_int_distribution<int> rdspiral(0,1);
-		int rdstate = rdspiral(mt);
-		if (rdstate == 0) spiralState = 1;
-		else spiralState = 3;
-
-		std::cout << spiralState << std::endl;
-
-		std::uniform_real_distribution<float> rdcolor(0.0f, 1.0f);
-		r = rdcolor(mt);
-		g = rdcolor(mt);
-		b = rdcolor(mt);
-
-		float mx = (2.0f * x / width) - 1.0f;
-		float my = 1.0f - (2.0f * y / height);
-		
-		shapes.clear();
-		angle = 0.0f;
-		radius = 0.0f;
-		
-		maxAngle = 1800.0f * (M_PI / 180.0f); // 720도
-	
-		makedots(mx, my);
-		for (int i = 0;i < maxspiral-1;i++) {
-			std::uniform_real_distribution<float> rdxy(-1.0f, 1.0f);
-			float rx = rdxy(mt);
-			float ry = rdxy(mt);
-			makedots(rx, ry);
-		}
-		UpdateBuffer();
-		glutPostRedisplay();
-	}
-}
-
-void makedots(float x, float y)
-{
-	SHAPE newShape;
-	newShape.x = x;
-	newShape.y = y;
-	newShape.centerX = x; 
-	newShape.centerY = y;
-
-	float size = 0.008f;
-	newShape.vertex = {
-		x - size, y + size, 0.0f, 1.0f, 1.0f, 1.0f,
-		x - size, y - size, 0.0f, 1.0f, 1.0f, 1.0f,
-		x + size, y + size, 0.0f, 1.0f, 1.0f, 1.0f,
-		x - size, y - size, 0.0f, 1.0f, 1.0f, 1.0f,
-		x + size, y - size, 0.0f, 1.0f, 1.0f, 1.0f,
-		x + size, y + size, 0.0f, 1.0f, 1.0f, 1.0f
-	};
-	shapes.push_back(newShape);
-}
-
 GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
-	case 'p':
-		if(spiralState == 0) spotLine = false;
-		break;
-	case 'l':
-		if (spiralState == 0) spotLine = true;
-		break;
 	case '1':
-		maxspiral = 1;
+		shapes.clear();
+		shapes.push_back(make_triangle(0.0f, 0.4f, -0.2f, 0.2f, 0.2f, 0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+		shapes.push_back(make_triangle(0.4f, 0.0f, 0.2f, 0.2f, 0.2f, -0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+		shapes.push_back(make_triangle(0.0f, -0.4f, 0.2f, -0.2f, -0.2f, -0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+		shapes.push_back(make_triangle(-0.4f, 0.0f, -0.2f, -0.2f, -0.2f, 0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+		UpdateBuffer();
 		break;
 	case '2':
-		maxspiral = 2;
+		shapes.clear();
+		shapes.push_back(make_triangle(0.0f, 0.05f, -0.2f, 0.2f, 0.2f, 0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+		shapes.push_back(make_triangle(0.05f, 0.0f, 0.2f, 0.2f, 0.2f, -0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+		shapes.push_back(make_triangle(0.0f, -0.05f, 0.2f, -0.2f, -0.2f, -0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+		shapes.push_back(make_triangle(-0.05f, 0.0f, -0.2f, -0.2f, -0.2f, 0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+		UpdateBuffer();
 		break;
 	case '3':
-		maxspiral = 3;
+		changeSize = !changeSize;
+		radius = 1.0f;
 		break;
 	case '4':
-		maxspiral = 4;
-		break;
-	case'5':
-		maxspiral = 5;
+		centerX = rdxy(mt);
+		centerY = rdxy(mt);
 		break;
 	case 'c':
-		shapes.clear();
-		UpdateBuffer();
-		spiralState = 0;
+		moveState = 1; // 시계방향 회전
+		break;
+	case 't':
+		moveState = 2; // 반시계방향 회전
+		break;
+	case 's':
+		moveState = 0; // 정지
 		break;
 	case 'q':
 		exit(0);
@@ -303,80 +251,45 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	glutPostRedisplay(); // 다시 그리기 요청
 }
 
-
-GLvoid Timer(int value)
+bool bigsmall = false;
+GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
 {
-	static int dotTimer = 0;
-	std::uniform_real_distribution<float> rdangle(-0.003f, 0.005f);
-
-	if (spiralState == 1) {
-		angle += 0.05f;
-		radius += rdangle(mt);
-
-		if (abs(angle) >= maxAngle) {
-			spiralState = 2;
-			angle = -900.0f * (M_PI / 180.0f);
-			for (int i = 0; i < shapes.size(); i++) {
-				shapes[i].centerX += radius*2;
+	if(moveState != 0)
+	{
+		if (changeSize) {
+			if (!bigsmall) {
+				radius += 0.005f;
+				if (radius >= 1.1f) bigsmall = true;
+			}
+			else {
+				radius -= 0.005f;
+				if (radius <= 0.9f) bigsmall = false;
 			}
 		}
-	}
-	else if (spiralState == 2) { 
-		angle -= 0.05f;
-		radius -= rdangle(mt);
 
-		if (radius <= 0.0f) {
-			radius = 0.0f;
-			spiralState = 0; 
-		}
-	}
-	else if (spiralState == 3) {
-		angle -= 0.05f;
-		radius += rdangle(mt);
+		float angle = (moveState == 1) ? -0.02f : 0.02f; // 시계방향 또는 반시계방향
+		for (int i = 0; i < shapes.size(); i++) {
+			for (int j = 0; j < shapes[i].vertex.size(); j += 6) {
+				float x = shapes[i].vertex[j];
+				float y = shapes[i].vertex[j + 1];
+				// 회전 변환 공식 적용
+				float newX =  (x - centerX) * cos(angle) - (y - centerY) * sin(angle);
+				float newY =  (x - centerX) * sin(angle) + (y - centerY) * cos(angle);
 
-		if (abs(angle) >= maxAngle) {
-			spiralState = 4;
-			angle = -900.0f * (M_PI / 180.0f);
-			for (int i = 0; i < shapes.size(); i++) {
-				shapes[i].centerX += radius * 2;
-			}
-		}
-	}
-	else if (spiralState == 4) {
-		angle += 0.05f;
-		radius -= rdangle(mt);
-
-		if (radius <= 0.0f) {
-			radius = 0.0f;
-			spiralState = 0;
-		}
-	}
-	
-	if (spotLine == 0) {
-		if (shapes.size() > 0) {
-			dotTimer++;
-			if (dotTimer % 8 == 0) {
-				for (int i = 0; i < maxspiral; i++) {
-					float px = shapes[i].centerX + radius * cos(angle);
-					float py = shapes[i].centerY + radius * sin(angle);
-					makedots(px, py);
+				if (changeSize)
+				{
+					newX *= radius;
+					newY *= radius;
 				}
-			}
-		}
-	}
-	else {
-		if (shapes.size() > 0) {
-			for (int i = 0; i < maxspiral; i++) {
-				float px = shapes[i].centerX + radius * cos(angle);
-				float py = shapes[i].centerY + radius * sin(angle);
-				makedots(px, py);
-			}
-		}
-	}
 
+				shapes[i].vertex[j] = newX + centerX;
+				shapes[i].vertex[j + 1] = newY + centerY;
+			}
+		}
+	}
 	UpdateBuffer();
-	glutPostRedisplay();
-	glutTimerFunc(1000 / 120, Timer, 1);
+	glutPostRedisplay(); // 다시 그리기 요청
+	glutTimerFunc(1000 / 120, Timer, 1); //--- 타이머 콜백함수 지정 (60 FPS)
 }
 
 void InitBuffer()
@@ -399,4 +312,25 @@ void InitBuffer()
 	glEnableVertexAttribArray(1);
 
 	glBindVertexArray(0);
+}
+
+void resetShape()
+{
+	shapes.clear();
+
+	shapes.push_back(make_triangle(0.0f, 0.4f, -0.2f, 0.2f, 0.2f, 0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+	shapes.push_back(make_triangle(0.4f, 0.0f, 0.2f, 0.2f, 0.2f, -0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+	shapes.push_back(make_triangle(0.0f, -0.4f, 0.2f, -0.2f, -0.2f, -0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+	shapes.push_back(make_triangle(-0.4f, 0.0f, -0.2f, -0.2f, -0.2f, 0.2f, rdcolor(mt), rdcolor(mt), rdcolor(mt)));
+
+	UpdateBuffer();
+}
+
+SHAPE make_triangle( float x1, float y1, float x2, float y2, float x3, float y3, float r, float g, float b)
+{
+	SHAPE newShape;
+	newShape.vertex.insert(newShape.vertex.end(), { x1, y1, 0.0f, r, g, b });
+	newShape.vertex.insert(newShape.vertex.end(), { x2, y2, 0.0f, r, g, b });
+	newShape.vertex.insert(newShape.vertex.end(), { x3, y3, 0.0f, r, g, b });
+	return newShape;
 }

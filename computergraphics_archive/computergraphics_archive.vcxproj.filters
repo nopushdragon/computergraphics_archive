@@ -78,6 +78,12 @@
     <ClCompile Include="실습11.cpp">
       <Filter>소스 파일\실습</Filter>
     </ClCompile>
+    <ClCompile Include="실습13.cpp">
+      <Filter>소스 파일\실습</Filter>
+    </ClCompile>
+    <ClCompile Include="실습14.cpp">
+      <Filter>소스 파일\실습</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="vertex.glsl">
