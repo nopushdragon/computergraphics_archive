@@ -1,8 +1,6 @@
 #define _CRT_SECURE_NO_WARNINGS //--- 프로그램 맨 앞에 선언할 것
 #define MAX_LINE_LENGTH 256
 
-//
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
@@ -16,12 +14,11 @@
 #include <vector>
 #include <string.h>
 
-
 std::random_device rd;
 std::mt19937 mt(rd());
 std::uniform_real_distribution<float> rdcolor(0.0f, 1.0f);
-std::uniform_real_distribution<float> rdxy(-1.0f, 1.0f);
-std::uniform_real_distribution<float> rdmovexy(-0.01f, 0.1f);
+std::uniform_int_distribution<int> rdface1(0, 5);
+std::uniform_int_distribution<int> rdface2(0, 3);
 
 void make_vertexShaders();
 void make_fragmentShaders();
@@ -32,24 +29,28 @@ GLvoid Keyboard(unsigned char key, int x, int y);
 GLvoid Mouse(int button, int state, int x, int y);
 GLvoid Timer(int value);
 void InitBuffer();
-void LoadOBJ(const char* filename);
+void InitAxisBuffer();
+void LoadOBJ(const char* filename, int object_num);
+void init_now_face();
 
 //--- 필요한 변수 선언
 GLint width, height;
 GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
-
-std::vector<GLfloat> dotver;
-std::vector<GLfloat> linever;
-std::vector<GLfloat> triver;
-std::vector<GLfloat> rectver;
 GLuint vao, vbo;
+GLuint axis_vao, axis_vbo; // 좌표축을 위한 VAO, VBO
+
+//
+int now_object = 0;
+std::vector<int> now_face;
+//
 
 std::vector<GLfloat> allVertices;
-
 struct SHAPE {
 	std::vector<GLfloat> vertex;
+    int face_count;
+    int object_num;
 };
 std::vector<SHAPE> shapes;
 
@@ -95,7 +96,10 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 
 	// 버퍼(VAO/VBO/EBO) 초기화 (셰이더 프로그램 생성 후 호출)
 	InitBuffer();
-	LoadOBJ("cube.obj");
+    InitAxisBuffer();
+	LoadOBJ("15_cube.obj",0);
+    LoadOBJ("15_pyramid.obj", 1);
+    init_now_face();
 
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
@@ -175,6 +179,23 @@ GLuint make_shaderProgram()
 	return shaderID;
 }
 
+void draw_axis()
+{
+    // 좌표축은 원점에 고정되므로 모델 행렬은 단위 행렬을 사용합니다.
+    // view, projection 행렬은 drawScene에서 이미 셰이더로 전달되었으므로 재전송할 필요가 없습니다.
+    glm::mat4 model = glm::mat4(1.0f);
+    GLuint modelLoc = glGetUniformLocation(shaderProgramID, "uModel");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
+
+    // 선 굵기를 2.0으로 설정 (기본값은 1.0)
+    glLineWidth(2.0f);
+
+    glBindVertexArray(axis_vao);
+    // 3개의 선분(총 6개의 정점)을 그립니다.
+    glDrawArrays(GL_LINES, 0, 6);
+    glBindVertexArray(0);
+}
+
 void UpdateBuffer()
 {
 	allVertices.clear();
@@ -188,43 +209,54 @@ void UpdateBuffer()
 
 GLvoid drawScene() {
 	glEnable(GL_DEPTH_TEST); // 깊이 테스트 활성화
+    //glEnable(GL_CULL_FACE);
+    //glDisable(GL_CULL_FACE);
+
 	glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    draw_axis();
+
+    glBindVertexArray(vao);
 	glUseProgram(shaderProgramID);
+    GLint first = 0;
+    for (int i = 0; i < shapes.size(); i++) {
+	    glm::mat4 model = glm::mat4(1.0f);
+        
+	    //model = glm::rotate(model, glm::radians(45.0f), glm::vec3(1.0f, 1.0f, 0.0f));
+	    model = glm::scale(model, glm::vec3(0.5f)); // 스케일 조정
 
-	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::rotate(model, glm::radians(45.0f), glm::vec3(1.0f, 1.0f, 0.0f));
-	model = glm::scale(model, glm::vec3(1.0f)); // 스케일 조정
+	    glm::mat4 view = glm::lookAt(
+	    	glm::vec3(3.0f, 3.0f, 3.0f),
+	    	glm::vec3(0.0f, 0.0f, 0.0f),
+	    	glm::vec3(0.0f, 1.0f, 0.0f)
+	    );
 
-	glm::mat4 view = glm::lookAt(
-		glm::vec3(0.0f, 0.0f, 2.5f),
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
+	    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
 
-	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+	    GLuint modelLoc = glGetUniformLocation(shaderProgramID, "uModel");
+	    GLuint viewLoc = glGetUniformLocation(shaderProgramID, "uView");
+	    GLuint projLoc = glGetUniformLocation(shaderProgramID, "uProj");
 
-	GLuint modelLoc = glGetUniformLocation(shaderProgramID, "uModel");
-	GLuint viewLoc = glGetUniformLocation(shaderProgramID, "uView");
-	GLuint projLoc = glGetUniformLocation(shaderProgramID, "uProj");
+	    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
+	    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+	    glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
 
-	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
-	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
-	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
+	    if (modelLoc == -1 || viewLoc == -1 || projLoc == -1) {
+	    	std::cerr << "ERROR: One or more uniform locations not found!" << std::endl;
+	    }
 
-	if (modelLoc == -1 || viewLoc == -1 || projLoc == -1) {
-		std::cerr << "ERROR: One or more uniform locations not found!" << std::endl;
-	}
-
-	glBindVertexArray(vao);
-	GLint first = 0;
-	for (int i = 0; i < shapes.size(); i++) {
 		int vertexCount = shapes[i].vertex.size() / 6;
-		glDrawArrays(GL_TRIANGLES, first, vertexCount);
+        if (shapes[i].object_num == now_object) {
+            for (int j = 0; j < now_face.size(); j++) {
+                if (now_face[j] == shapes[i].face_count) {
+                    glDrawArrays(GL_TRIANGLES, first, vertexCount);
+                }
+            }
+        }
 		first += vertexCount;
 	}
-
+    
 	glBindVertexArray(0);
 	glutSwapBuffers();
 }
@@ -237,6 +269,91 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
+    case '1':
+        if (now_object == 0) {
+            now_face.clear();
+            now_face.insert(now_face.end(), { 10,11 });
+        }
+        break;
+    case '2':
+        if (now_object == 0) {
+            now_face.clear();
+            now_face.insert(now_face.end(), { 6,7 });
+        }
+        break;
+    case '3':
+        if (now_object == 0) {
+            now_face.clear();
+            now_face.insert(now_face.end(), { 0,1 });
+        }
+        break;
+    case '4':
+        if (now_object == 0) {
+            now_face.clear();
+            now_face.insert(now_face.end(), { 2,3 });
+        }
+        break;
+    case '5':
+        if (now_object == 0) {
+            now_face.clear();
+            now_face.insert(now_face.end(), { 4,5 });
+        }
+        break;
+    case '6':
+        if (now_object == 0) {
+            now_face.clear();
+            now_face.insert(now_face.end(), { 8,9 });
+        }
+        break;
+    case '7':
+        if (now_object == 1) {
+            now_face.clear();
+            now_face.insert(now_face.end(), { 0,1 });
+        }
+        break;
+    case '8':
+        if (now_object == 1) {
+            now_face.clear();
+            now_face.insert(now_face.end(), { 2,3 });
+        }
+        break;
+    case '9':
+        if (now_object == 1) {
+            now_face.clear();
+            now_face.insert(now_face.end(), { 4,5 });
+        }
+        break;
+    case '0':
+        if (now_object == 1) {
+            now_face.clear();
+            now_face.insert(now_face.end(), { 6,7 });
+        }
+        break;
+    case 'a':
+        now_object = 0;
+        init_now_face();
+        break;
+    case 'b':
+        now_object = 1;
+        init_now_face();
+        break;
+    case 'c':
+        if (now_object == 0) {
+            now_face.clear();
+            int n=rdface1(mt)*2, m = rdface1(mt)*2;
+            while (n == m) {
+                n = rdface1(mt)*2, m = rdface1(mt)*2;
+            }
+            now_face.insert(now_face.end(), { n, n+1,m,m+1 });
+        }
+        break;
+    case 't':
+        if (now_object == 1) {
+            now_face.clear();
+            int n = rdface2(mt) * 2;
+            now_face.insert(now_face.end(), { 8,9,n,n + 1 });
+        }
+        break;
 	case 'q':
 		exit(0);
 		break;
@@ -278,20 +395,55 @@ void InitBuffer()
 	glBindVertexArray(0);
 }
 
-typedef struct {
+void InitAxisBuffer()
+{
+    // X, Y, Z 축을 나타내는 6개의 정점 데이터. 각 정점은 (x, y, z, r, g, b) 형식입니다.
+    GLfloat axis_vertices[] = {
+        // X-axis (Red)
+        -1.0f, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f,
+         1.0f, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f,
+        // Y-axis (Green)
+         0.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f,
+         0.0f,  1.0f, 0.0f,  0.0f, 1.0f, 0.0f,
+        // Z-axis (Blue)
+         0.0f, 0.0f, -1.0f,  0.0f, 0.0f, 1.0f,
+         0.0f, 0.0f,  1.0f,  0.0f, 0.0f, 1.0f
+    };
+
+    glGenVertexArrays(1, &axis_vao);
+    glGenBuffers(1, &axis_vbo);
+
+    glBindVertexArray(axis_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, axis_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(axis_vertices), axis_vertices, GL_STATIC_DRAW);
+
+    // 위치 속성 (location = 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // 색상 속성 (location = 1)
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0);
+}
+
+struct Vertex{
 	float x, y, z;
-} Vertex;
+};
 
-typedef struct {
+struct Face{
 	unsigned int v1, v2, v3;
-} Face;
+};
 
-typedef struct {
+struct Model{
 	Vertex* vertices;
 	size_t vertex_count;
 	Face* faces;
 	size_t face_count;
-} Model;
+};
+std::vector<Model> models;
+Model read_obj_file(const char* filename);
 
 void read_newline(char* str) {
 	char* pos;
@@ -299,7 +451,8 @@ void read_newline(char* str) {
 		*pos = '\0';
 }
 
-void read_obj_file(const char* filename, Model* model) {
+Model read_obj_file(const char* filename) {
+    Model model;
 	FILE* file;
 	fopen_s(&file, filename, "r");
 	if (!file) {
@@ -307,87 +460,86 @@ void read_obj_file(const char* filename, Model* model) {
 		exit(EXIT_FAILURE);
 	}
 	char line[MAX_LINE_LENGTH];
-	model->vertex_count = 0;
-	model->face_count = 0;
+	model.vertex_count = 0;
+	model.face_count = 0;
 
 	while (fgets(line, sizeof(line), file)) {
 		read_newline(line);
 		if (line[0] == 'v' && line[1] == ' ')
-			model->vertex_count++;
+			model.vertex_count++;
 		else if (line[0] == 'f' && line[1] == ' ')
-			model->face_count++;
+			model.face_count++;
 	}
 
 	fseek(file, 0, SEEK_SET);
-	model->vertices = (Vertex*)malloc(model->vertex_count * sizeof(Vertex));
-	model->faces = (Face*)malloc(model->face_count * sizeof(Face));
+	model.vertices = (Vertex*)malloc(model.vertex_count * sizeof(Vertex));
+	model.faces = (Face*)malloc(model.face_count * sizeof(Face));
 	size_t vertex_index = 0; size_t face_index = 0;
 	while (fgets(line, sizeof(line), file)) {
 		read_newline(line);
 		if (line[0] == 'v' && line[1] == ' ') {
-			int result = sscanf_s(line + 2, "%f %f %f", &model->vertices[vertex_index].x,
-				&model->vertices[vertex_index].y,
-				&model->vertices[vertex_index].z);
+			int result = sscanf_s(line + 2, "%f %f %f",
+                &model.vertices[vertex_index].x,
+				&model.vertices[vertex_index].y,
+				&model.vertices[vertex_index].z);
 			vertex_index++;
 		}
 		else if (line[0] == 'f' && line[1] == ' ') {
 			unsigned int v1, v2, v3;
 			int result = sscanf_s(line + 2, "%u %u %u", &v1, &v2, &v3);
-			model->faces[face_index].v1 = v1 - 1; // OBJ indices start at 1
-			model->faces[face_index].v2 = v2 - 1;
-			model->faces[face_index].v3 = v3 - 1;
+			model.faces[face_index].v1 = v1 - 1; // OBJ indices start at 1
+			model.faces[face_index].v2 = v2 - 1;
+			model.faces[face_index].v3 = v3 - 1;
 			face_index++;
 		}
 	}
 	fclose(file);
-
+    return model;
 }
 
-void LoadOBJ(const char* filename)
+void LoadOBJ(const char* filename, int object_num)
 {
-	Model model;
-	read_obj_file(filename, &model);
+    models.clear();
+    models.push_back(read_obj_file(filename));
 
-	SHAPE shape;
-	for (size_t i = 0; i < model.face_count; i++) {
-		Face f = model.faces[i];
-		Vertex v1 = model.vertices[f.v1];
-		Vertex v2 = model.vertices[f.v2];
-		Vertex v3 = model.vertices[f.v3];
+    float r, g, b;
+    static int rdcnt = 0;
 
-		// 각 삼각형의 세 정점 추가 (RGB 랜덤)
-		float r = rdcolor(mt);
-		float g = rdcolor(mt);
-		float b = rdcolor(mt);
+    for (auto& m : models) {
+        for (size_t i = 0; i < m.face_count; i++) {
+            Face f = m.faces[i];
+            Vertex v1 = m.vertices[f.v1];
+            Vertex v2 = m.vertices[f.v2];
+            Vertex v3 = m.vertices[f.v3];
 
-		// v1
-		shape.vertex.push_back(v1.x);
-		shape.vertex.push_back(v1.y);
-		shape.vertex.push_back(v1.z);
-		shape.vertex.push_back(r);
-		shape.vertex.push_back(g);
-		shape.vertex.push_back(b);
+            // 각 삼각형의 세 정점 추가 (RGB 랜덤)
+            if(rdcnt %2 == 0) {
+                r = rdcolor(mt);
+                g = rdcolor(mt);
+                b = rdcolor(mt);
+            }
+            rdcnt++;
 
-		// v2
-		shape.vertex.push_back(v2.x);
-		shape.vertex.push_back(v2.y);
-		shape.vertex.push_back(v2.z);
-		shape.vertex.push_back(r);
-		shape.vertex.push_back(g);
-		shape.vertex.push_back(b);
+	        SHAPE shape;
+            shape.object_num = object_num;
+            shape.face_count = i;
+            shape.vertex.insert(shape.vertex.end(), {
+                v1.x, v1.y, v1.z, r, g, b,  // v1 데이터
+                v2.x, v2.y, v2.z, r, g, b,  // v2 데이터
+                v3.x, v3.y, v3.z, r, g, b   // v3 데이터
+            });
+            shapes.push_back(shape);
+        }
+    }
+    UpdateBuffer();
+}
 
-		// v3
-		shape.vertex.push_back(v3.x);
-		shape.vertex.push_back(v3.y);
-		shape.vertex.push_back(v3.z);
-		shape.vertex.push_back(r);
-		shape.vertex.push_back(g);
-		shape.vertex.push_back(b);
-	}
-
-	shapes.push_back(shape);
-	UpdateBuffer();
-
-	free(model.vertices);
-	free(model.faces);
+void init_now_face()
+{
+    now_face.clear();
+    for (int i = 0;i < shapes.size();i++) {
+        if(shapes[i].object_num == now_object) {
+            now_face.push_back(shapes[i].face_count);
+        }
+    }
 }
