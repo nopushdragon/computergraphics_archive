@@ -26,13 +26,12 @@ GLuint make_shaderProgram();
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 GLvoid Keyboard(unsigned char key, int x, int y);
-GLvoid SpecialKeyboard(int key, int x, int y);
 GLvoid Mouse(int button, int state, int x, int y);
 GLvoid Timer(int value);
 void InitBuffer();
 void InitAxisBuffer();
 void LoadOBJ(const char* filename, int object_num);
-void init_now_face();
+void reset_bool();
 
 //--- 필요한 변수 선언
 GLint width, height;
@@ -43,24 +42,34 @@ GLuint vao, vbo;
 GLuint axis_vao, axis_vbo; // 좌표축을 위한 VAO, VBO
 
 //
-int now_object = 0;
-std::vector<int> now_face;
 bool axis_display = true;
 bool depth_on = true;
 
-bool isy = false;
-bool ist = false, isf = false, iss = false, isb = false;
-bool iso = false, isr = false;
+int now_object = -1;
+int isy = -1;
+int isx = -1;
+int isr = -1;
+int isa = -1;
+int isb = -1;
+int isd = -1;
+int ise = -1;
+bool isc = false;
 
-float y_radian_stack = 0.0f;
-float t_radian_stack = 0.0f;
-float f_radian_stack = 0.0f;
-float s_radian_stack = 0.0f;
-float b_size_stack = 1.0f;
+float x_radian_stack_1 = 0.0f;
+float y_radian_stack_1 = 0.0f;
+float r_radian_stack_1 = 0.0f;
+float a_size_stack_1 = 1.0f;
+float b_size_stack_1 = 1.0f;
+float d_length_stack_1 = 0.0f;
+float e_length_stack_1 = 0.0f;
 
-float o_radian_stack = 0.0f;
-float r_radian_stack = 0.0f;
-int r_cnt = 0;
+float x_radian_stack_2 = 0.0f;
+float y_radian_stack_2 = 0.0f;
+float r_radian_stack_2 = 0.0f;
+float a_size_stack_2 = 1.0f;
+float b_size_stack_2 = 1.0f;
+float d_length_stack_2 = 0.0f;
+float e_length_stack_2 = 0.0f;
 //
 
 std::vector<GLfloat> allVertices;
@@ -116,13 +125,11 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
     InitBuffer();
     InitAxisBuffer();
     LoadOBJ("15_cube.obj", 0);
-    LoadOBJ("15_pyramid.obj", 1);
-    init_now_face();
+    LoadOBJ("sphere.obj", 1);
 
     glutDisplayFunc(drawScene); //--- 출력 콜백 함수
     glutReshapeFunc(Reshape);
     glutKeyboardFunc(Keyboard);
-    glutSpecialFunc(SpecialKeyboard);
     glutMouseFunc(Mouse);
     glutTimerFunc(1000 / 60, Timer, 1); //--- 타이머 콜백함수 지정 (60 FPS)
 
@@ -248,7 +255,7 @@ GLvoid drawScene() {
 
         //model = glm::translate(model, glm::vec3(1.5f, 0.5f, 0.0f)); x축 1.5 y축 0.5만큼 이동
         //model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // y축 기준 45도 회전
-        model = glm::scale(model, glm::vec3(0.5f)); // 스케일 조정
+        //model = glm::scale(model, glm::vec3(0.5f)); 스케일 조정
 
         glm::mat4 view = glm::lookAt(
             glm::vec3(3.0f, 3.0f, 3.0f),
@@ -271,12 +278,8 @@ GLvoid drawScene() {
         }
 
         int vertexCount = shapes[i].vertex.size() / 6;
-        if (shapes[i].object_num == now_object) {
-            for (int j = 0; j < now_face.size(); j++) {
-                if (now_face[j] == shapes[i].face_count) {
-                    glDrawArrays(GL_TRIANGLES, first, vertexCount);
-                }
-            }
+        if ((shapes[i].object_num == 0 ||shapes[i].object_num == 1) && !isc) {
+            glDrawArrays(GL_TRIANGLES, first, vertexCount);
         }
         first += vertexCount;
     }
@@ -293,59 +296,73 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 GLvoid Keyboard(unsigned char key, int x, int y)
 {
     switch (key) {
+    case '1':
+        now_object = 1; // 좌측
+        break;
+    case '2':
+        now_object = 2; // 우측
+        break;
+    case '3':
+        now_object = 3; // 둘 다
+        break;
     case 'h':
         depth_on = !depth_on;
         break;
-    case 'p':
-        if (now_object == 0) now_object = 1;
-        else now_object = 0;
-        init_now_face();
+    case 'x':
+        reset_bool();
+        isx = 0;
+        break;
+    case 'X':
+        reset_bool();
+        isx = 1;
         break;
     case 'y':
-        isy = !isy;
+        reset_bool();
+        isy = 0;
         break;
-    case 'c':
-        now_object = 0;
-        init_now_face();
-        for (int i = 0; i < shapes.size(); i++) {
-            shapes[i].model = glm::mat4(1.0f);
-        }
-        isy = false, ist = false, isf = false, iss = false, isb = false, iso = false, isr = false;
-
-        y_radian_stack = 0.0f;
-        t_radian_stack = 0.0f;
-        f_radian_stack = 0.0f;
-        s_radian_stack = 0.0f;
-        b_size_stack = 1.0f;
-        o_radian_stack = 0.0f;
-        r_radian_stack = 0.0f;
-        r_cnt = 0;
+    case 'Y':
+        reset_bool();
+        isy = 1;
         break;
-    case 't':
-        if (now_object == 0) ist = !ist;
+    case 'r':
+        reset_bool();
+        isr = 0;
         break;
-    case 'f':
-        if (now_object == 0) isf = !isf;
+    case 'R':
+        reset_bool();
+        isr = 1;
         break;
-    case 's':
-        if (now_object == 0) iss = !iss;
+    case 'a':
+        reset_bool();
+        isa = 0;
+        break;
+    case 'A':
+        reset_bool();
+        isa = 1;
         break;
     case 'b':
-        if (now_object == 0) isb = !isb;
+        reset_bool();
+        isb = 0;
         break;
-    case 'o':
-        if (now_object == 1) iso = !iso;
+    case 'B':
+        reset_bool();
+        isb = 1;
         break;
-    case'r':
-        if (r_cnt <= 0) {
-            r_cnt = 0;
-            r_radian_stack = 0.0f;
-        }
-        else if (r_cnt >= 3) {
-            r_cnt = 3;
-            r_radian_stack = 90.0f;
-        }
-        if (now_object == 1) isr = !isr;
+    case 'd':
+        reset_bool();
+        isd = 0;
+        break;
+    case 'D':
+        reset_bool();
+        isd = 1;
+        break;
+    case 'e':
+        reset_bool();
+        ise = 0;
+        break;
+    case 'E':
+        reset_bool();
+        ise = 1;
         break;
     case VK_TAB:
         axis_display = !axis_display;
@@ -358,31 +375,14 @@ GLvoid Keyboard(unsigned char key, int x, int y)
     glutPostRedisplay(); // 다시 그리기 요청
 }
 
-GLvoid SpecialKeyboard(int key, int x, int y)
-{
-    switch (key) {
-    case GLUT_KEY_LEFT: // VK_LEFT -> GLUT_KEY_LEFT
-        for (int i = 0; i < shapes.size(); i++) {
-            if (shapes[i].object_num == now_object) shapes[i].model = glm::translate(shapes[i].model, glm::vec3(-0.1f, 0.0f, 0.0f));
-        }
-        break;
-    case GLUT_KEY_RIGHT: // VK_RIGHT -> GLUT_KEY_RIGHT
-        for (int i = 0; i < shapes.size(); i++) {
-            if (shapes[i].object_num == now_object) shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.1f, 0.0f, 0.0f));
-        }
-        break;
-    case GLUT_KEY_UP: // VK_UP -> GLUT_KEY_UP
-        for (int i = 0; i < shapes.size(); i++) {
-            if (shapes[i].object_num == now_object) shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.1f, 0.0f));
-        }
-        break;
-    case GLUT_KEY_DOWN: // VK_DOWN -> GLUT_KEY_DOWN
-        for (int i = 0; i < shapes.size(); i++) {
-            if (shapes[i].object_num == now_object) shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, -0.1f, 0.0f));
-        }
-        break;
-    }
-    glutPostRedisplay(); // 다시 그리기 요청
+void reset_bool() {
+    isx = -1;
+    isy = -1;
+    isr = -1;
+    isa = -1;
+    isb = -1;
+    isd = -1;
+    ise = -1;
 }
 
 GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
@@ -390,115 +390,109 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
     for (int i = 0;i < shapes.size();i++) {
         shapes[i].model = glm::mat4(1.0f);
 
-        shapes[i].model = glm::rotate(shapes[i].model, glm::radians(y_radian_stack), glm::vec3(0.0f, 1.0f, 0.0f));
-
-        if (now_object == 0 && shapes[i].object_num == 0) {
-            if (shapes[i].face_count == 4 || shapes[i].face_count == 5) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.5f, 0.0f));
-                shapes[i].model = glm::rotate(shapes[i].model, glm::radians(t_radian_stack), glm::vec3(0.0f, 0.0f, 1.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, -0.5f, 0.0f));
-            }
-
-            if (shapes[i].face_count == 8 || shapes[i].face_count == 9) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.5f, 0.5f, 0.0f));
-                shapes[i].model = glm::rotate(shapes[i].model, glm::radians(f_radian_stack), glm::vec3(0.0f, 0.0f, 1.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(-0.5f, -0.5f, 0.0f));
-            }
-
-            if (shapes[i].face_count == 6 || shapes[i].face_count == 7 || shapes[i].face_count == 2 || shapes[i].face_count == 3) {
-                shapes[i].model = glm::rotate(shapes[i].model, glm::radians(s_radian_stack), glm::vec3(1.0f, 0.0f, 0.0f));
-            }
-
-            if (shapes[i].face_count == 0 || shapes[i].face_count == 1) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.0f, -0.5f));
-                shapes[i].model = glm::scale(shapes[i].model, glm::vec3(b_size_stack));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.0f, 0.5f));
-            }
+        //스케일(원점)
+        if (shapes[i].object_num == 0 || shapes[i].object_num == 2) {
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(b_size_stack_1));
         }
-        else if (now_object == 1 && shapes[i].object_num == 1) {
-            if (shapes[i].face_count == 4 || shapes[i].face_count == 5) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.0f, -0.25f));
-                shapes[i].model = glm::rotate(shapes[i].model, glm::radians(-o_radian_stack), glm::vec3(1.0f, 0.0f, 0.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.0f, 0.25f));
-            }
-
-            if (shapes[i].face_count == 2 || shapes[i].face_count == 3) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.0f, 0.25f));
-                shapes[i].model = glm::rotate(shapes[i].model, glm::radians(o_radian_stack), glm::vec3(1.0f, 0.0f, 0.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.0f, -0.25f));
-            }
-
-            if (shapes[i].face_count == 0 || shapes[i].face_count == 1) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.25f, 0.0f, 0.0f));
-                shapes[i].model = glm::rotate(shapes[i].model, glm::radians(-o_radian_stack), glm::vec3(0.0f, 0.0f, 1.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(-0.25f, 0.0f, 0.0f));
-            }
-
-            if (shapes[i].face_count == 6 || shapes[i].face_count == 7) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(-0.25f, 0.0f, 0.25f));
-                shapes[i].model = glm::rotate(shapes[i].model, glm::radians(o_radian_stack), glm::vec3(0.0f, 0.0f, 1.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.25f, 0.0f, -0.25f));
-            }
-            //=================================================================================================
-            if (shapes[i].face_count == 4 || shapes[i].face_count == 5) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.0f, -0.25f));
-                if (r_cnt > 0) shapes[i].model = glm::rotate(shapes[i].model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-                else if (r_cnt < 0) shapes[i].model = glm::rotate(shapes[i].model, glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-                else shapes[i].model = glm::rotate(shapes[i].model, glm::radians(-r_radian_stack), glm::vec3(1.0f, 0.0f, 0.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.0f, 0.25f));
-            }
-
-            if (shapes[i].face_count == 2 || shapes[i].face_count == 3) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.0f, 0.25f));
-                if (r_cnt > 1) shapes[i].model = glm::rotate(shapes[i].model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-                else if (r_cnt < 1) shapes[i].model = glm::rotate(shapes[i].model, glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-                else shapes[i].model = glm::rotate(shapes[i].model, glm::radians(r_radian_stack), glm::vec3(1.0f, 0.0f, 0.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.0f, -0.25f));
-            }
-
-            if (shapes[i].face_count == 0 || shapes[i].face_count == 1) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.25f, 0.0f, 0.0f));
-                if (r_cnt > 2) shapes[i].model = glm::rotate(shapes[i].model, glm::radians(-90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-                else if (r_cnt < 2) shapes[i].model = glm::rotate(shapes[i].model, glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-                else shapes[i].model = glm::rotate(shapes[i].model, glm::radians(-r_radian_stack), glm::vec3(0.0f, 0.0f, 1.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(-0.25f, 0.0f, 0.0f));
-            }
-
-            if (shapes[i].face_count == 6 || shapes[i].face_count == 7) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(-0.25f, 0.0f, 0.25f));
-                if (r_cnt > 3) shapes[i].model = glm::rotate(shapes[i].model, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-                else if (r_cnt < 3) shapes[i].model = glm::rotate(shapes[i].model, glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-                else shapes[i].model = glm::rotate(shapes[i].model, glm::radians(r_radian_stack), glm::vec3(0.0f, 0.0f, 1.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.25f, 0.0f, -0.25f));
-            }
-
+        else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(b_size_stack_2));
         }
 
+        //공전
+        if (shapes[i].object_num == 0 || shapes[i].object_num == 2) {
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(r_radian_stack_1), glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+        else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(r_radian_stack_2), glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+
+        //이동
+        if (shapes[i].object_num == 0 || shapes[i].object_num == 2) {
+            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, e_length_stack_1, 0.0f));
+            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(d_length_stack_1, 0.0f, 0.0f));
+            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(-1.0f, 0.0f, 0.0f));
+        }
+        else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
+            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, e_length_stack_2, 0.0f));
+            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(d_length_stack_1, 0.0f, 0.0f));
+            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(1.0f, 0.0f, 0.0f));
+        }
+
+        //자전
+        if (shapes[i].object_num == 0 || shapes[i].object_num == 2) {
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(y_radian_stack_1), glm::vec3(0.0f, 1.0f, 0.0f));
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(x_radian_stack_1), glm::vec3(1.0f, 0.0f, 0.0f));
+        }
+        else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(y_radian_stack_2), glm::vec3(0.0f, 1.0f, 0.0f));
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(x_radian_stack_2), glm::vec3(1.0f, 0.0f, 0.0f));
+        }
+
+        //스케일(객체)
+        if (shapes[i].object_num == 0 || shapes[i].object_num == 2) {
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(a_size_stack_1));
+        }
+        else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(a_size_stack_2));
+        }
+        shapes[i].model = glm::scale(shapes[i].model, glm::vec3(0.3f));
     }
 
-    if (isy) y_radian_stack += 1.0f;
-    if (ist) t_radian_stack += 1.0f;
-    if (isf && f_radian_stack < 180.f) f_radian_stack += 1.0f;
-    else if (!isf && f_radian_stack > 0.0f) f_radian_stack -= 1.0f;
-    if (iss) s_radian_stack += 1.0f;
-    if (isb && b_size_stack > 0.0f) b_size_stack -= 0.01f;
-    else if (!isb && b_size_stack < 1.0f) b_size_stack += 0.01f;
-
-    if (iso && o_radian_stack < 235.f) o_radian_stack += 1.0f;
-    else if (!iso && o_radian_stack > 0.0f) o_radian_stack -= 1.0f;
-    if (isr && r_radian_stack < 90.f) {
-        r_radian_stack += 1.0f;
-        if (r_radian_stack >= 90.0f) {
-            r_cnt++;
-            r_radian_stack = 0.0f;
-        }
+    if (isx == 0) {
+        if (now_object == 1 || now_object == 3) x_radian_stack_1 += 1.0f;
+        if (now_object == 2 || now_object == 3) x_radian_stack_2 += 1.0f;
     }
-    else if (!isr && r_radian_stack > 0.0f) {
-        r_radian_stack -= 1.0f;
-        if (r_radian_stack <= 0.0f) {
-            r_cnt--;
-            r_radian_stack = 90.0f;
-        }
+    else if (isx == 1) {
+        if (now_object == 1 || now_object == 3) x_radian_stack_1 -= 1.0f;
+        if (now_object == 2 || now_object == 3) x_radian_stack_2 -= 1.0f;
+    }
+    else if (isy == 0) {
+        if (now_object == 1 || now_object == 3) y_radian_stack_1 += 1.0f;
+        if (now_object == 2 || now_object == 3) y_radian_stack_2 += 1.0f;
+    }
+    else if(isy == 1){
+        if (now_object == 1 || now_object == 3) y_radian_stack_1 -= 1.0f;
+        if (now_object == 2 || now_object == 3) y_radian_stack_2 -= 1.0f;
+    }
+    else if (isr == 0) {
+        if (now_object == 1 || now_object == 3) r_radian_stack_1 += 1.0f;
+        if (now_object == 2 || now_object == 3) r_radian_stack_2 += 1.0f;
+    }                                           
+    else if (isr == 1) {                        
+        if (now_object == 1 || now_object == 3) r_radian_stack_1 -= 1.0f;
+        if (now_object == 2 || now_object == 3) r_radian_stack_2 -= 1.0f;
+    }
+    else if (isa == 0) {
+        if (now_object == 1 || now_object == 3) a_size_stack_1 += 0.005f;
+        if (now_object == 2 || now_object == 3) a_size_stack_2 += 0.005f;
+    }
+    else if (isa == 1) {
+        if (now_object == 1 || now_object == 3) a_size_stack_1 -= 0.005f;
+        if (now_object == 2 || now_object == 3) a_size_stack_2 -= 0.005f;
+    }
+    else if (isb == 0) {
+        if (now_object == 1 || now_object == 3) b_size_stack_1 += 0.005f;
+        if (now_object == 2 || now_object == 3) b_size_stack_2 += 0.005f;
+    }                                           
+    else if (isb == 1) {                        
+        if (now_object == 1 || now_object == 3) b_size_stack_1 -= 0.005f;
+        if (now_object == 2 || now_object == 3) b_size_stack_2 -= 0.005f;
+    }
+    else if (isd == 0) {
+        if (now_object == 1 || now_object == 3) d_length_stack_1 -= 0.005f;
+        if (now_object == 2 || now_object == 3) d_length_stack_2 -= 0.005f;
+    }
+    else if (isd == 1) {
+        if (now_object == 1 || now_object == 3) d_length_stack_1 += 0.005f;
+        if (now_object == 2 || now_object == 3) d_length_stack_2 += 0.005f;
+    }
+    else if (ise == 0) {
+        if (now_object == 1 || now_object == 3) e_length_stack_1 += 0.005f;
+        if (now_object == 2 || now_object == 3) e_length_stack_2 += 0.005f;
+    }                                           
+    else if (ise == 1) {                        
+        if (now_object == 1 || now_object == 3) e_length_stack_1 -= 0.005f;
+        if (now_object == 2 || now_object == 3) e_length_stack_2 -= 0.005f;
     }
 
     glutPostRedisplay(); // 다시 그리기 요청
@@ -668,14 +662,4 @@ void LoadOBJ(const char* filename, int object_num)
         }
     }
     UpdateBuffer();
-}
-
-void init_now_face()
-{
-    now_face.clear();
-    for (int i = 0;i < shapes.size();i++) {
-        if (shapes[i].object_num == now_object) {
-            now_face.push_back(shapes[i].face_count);
-        }
-    }
 }
