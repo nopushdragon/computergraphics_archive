@@ -54,6 +54,8 @@ int isb = -1;
 int isd = -1;
 int ise = -1;
 bool isc = false;
+bool isv = false;
+bool ist = false;
 
 float x_radian_stack_1 = 0.0f;
 float y_radian_stack_1 = 0.0f;
@@ -62,6 +64,11 @@ float a_size_stack_1 = 1.0f;
 float b_size_stack_1 = 1.0f;
 float d_length_stack_1 = 0.0f;
 float e_length_stack_1 = 0.0f;
+float v_size_stack_1 = 1.0f;
+float v_j_radian_stack_1 = 0.0f;
+float v_g_radian_stack_1 = 0.0f;
+float t_goal_x_1, t_goal_y_1, t_goal_z_1;
+
 
 float x_radian_stack_2 = 0.0f;
 float y_radian_stack_2 = 0.0f;
@@ -70,6 +77,10 @@ float a_size_stack_2 = 1.0f;
 float b_size_stack_2 = 1.0f;
 float d_length_stack_2 = 0.0f;
 float e_length_stack_2 = 0.0f;
+float v_size_stack_2 = 1.0f;
+float v_j_radian_stack_2 = 0.0f;
+float v_g_radian_stack_2 = 0.0f;
+float t_goal_x_2, t_goal_y_2, t_goal_z_2;
 //
 
 std::vector<GLfloat> allVertices;
@@ -364,6 +375,15 @@ GLvoid Keyboard(unsigned char key, int x, int y)
         reset_bool();
         ise = 1;
         break;
+    case 't':
+        reset_bool();
+        ist = true;
+        t_goal_x_1 = shapes[0].model[3][0];
+        break;
+    case 'v':
+        reset_bool();
+        isv = true;
+        break;
     case VK_TAB:
         axis_display = !axis_display;
         break;
@@ -383,6 +403,7 @@ void reset_bool() {
     isb = -1;
     isd = -1;
     ise = -1;
+    isv = false;
 }
 
 GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
@@ -393,17 +414,21 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
         //스케일(원점)
         if (shapes[i].object_num == 0 || shapes[i].object_num == 2) {
             shapes[i].model = glm::scale(shapes[i].model, glm::vec3(b_size_stack_1));
+            
         }
         else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
             shapes[i].model = glm::scale(shapes[i].model, glm::vec3(b_size_stack_2));
+            
         }
 
         //공전
         if (shapes[i].object_num == 0 || shapes[i].object_num == 2) {
             shapes[i].model = glm::rotate(shapes[i].model, glm::radians(r_radian_stack_1), glm::vec3(0.0f, 1.0f, 0.0f));
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(v_g_radian_stack_1), glm::vec3(0.0f, 1.0f, 0.0f));
         }
         else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
             shapes[i].model = glm::rotate(shapes[i].model, glm::radians(r_radian_stack_2), glm::vec3(0.0f, 1.0f, 0.0f));
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(v_g_radian_stack_2), glm::vec3(0.0f, 1.0f, 0.0f));
         }
 
         //이동
@@ -422,18 +447,22 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
         if (shapes[i].object_num == 0 || shapes[i].object_num == 2) {
             shapes[i].model = glm::rotate(shapes[i].model, glm::radians(y_radian_stack_1), glm::vec3(0.0f, 1.0f, 0.0f));
             shapes[i].model = glm::rotate(shapes[i].model, glm::radians(x_radian_stack_1), glm::vec3(1.0f, 0.0f, 0.0f));
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(v_j_radian_stack_1), glm::vec3(1.0f, 0.0f, 0.0f));
         }
         else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
             shapes[i].model = glm::rotate(shapes[i].model, glm::radians(y_radian_stack_2), glm::vec3(0.0f, 1.0f, 0.0f));
             shapes[i].model = glm::rotate(shapes[i].model, glm::radians(x_radian_stack_2), glm::vec3(1.0f, 0.0f, 0.0f));
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(v_j_radian_stack_2), glm::vec3(1.0f, 0.0f, 0.0f));
         }
 
         //스케일(객체)
         if (shapes[i].object_num == 0 || shapes[i].object_num == 2) {
             shapes[i].model = glm::scale(shapes[i].model, glm::vec3(a_size_stack_1));
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(v_size_stack_1));
         }
         else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
             shapes[i].model = glm::scale(shapes[i].model, glm::vec3(a_size_stack_2));
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(v_size_stack_2));
         }
         shapes[i].model = glm::scale(shapes[i].model, glm::vec3(0.3f));
     }
@@ -493,6 +522,14 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
     else if (ise == 1) {                        
         if (now_object == 1 || now_object == 3) e_length_stack_1 -= 0.005f;
         if (now_object == 2 || now_object == 3) e_length_stack_2 -= 0.005f;
+    }
+    else if (isv == true) {
+        v_size_stack_1 += 0.002f;
+        v_j_radian_stack_1 += 1.0f;
+        v_g_radian_stack_1 += 1.0f;
+        v_size_stack_2 -= 0.002f;
+        v_j_radian_stack_2 += 1.0f;
+        v_g_radian_stack_2 += 1.0f;
     }
 
     glutPostRedisplay(); // 다시 그리기 요청

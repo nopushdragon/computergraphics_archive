@@ -51,6 +51,7 @@ bool depth_on = true;
 bool isy = false;
 bool ist = false, isf = false, iss = false, isb = false;
 bool iso = false, isr = false;
+bool isu = false; //뒷면제거
 
 float y_radian_stack = 0.0f;
 float t_radian_stack = 0.0f;
@@ -231,9 +232,8 @@ GLvoid drawScene() {
         glEnable(GL_DEPTH_TEST); // 은면제거
     else
         glDisable(GL_DEPTH_TEST);
-
-    //glEnable(GL_CULL_FACE); 뒷면제거
-    //glDisable(GL_CULL_FACE);
+    if(isu) glEnable(GL_CULL_FACE); //뒷면제거
+    else glDisable(GL_CULL_FACE);
 
     glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -347,6 +347,9 @@ GLvoid Keyboard(unsigned char key, int x, int y)
         }
         if (now_object == 1) isr = !isr;
         break;
+    case 'u':
+        isu = !isu;
+        break;
     case VK_TAB:
         axis_display = !axis_display;
         break;
@@ -399,10 +402,10 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
                 shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, -0.5f, 0.0f));
             }
 
-            if (shapes[i].face_count == 8 || shapes[i].face_count == 9) {
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.5f, 0.5f, 0.0f));
-                shapes[i].model = glm::rotate(shapes[i].model, glm::radians(f_radian_stack), glm::vec3(0.0f, 0.0f, 1.0f));
-                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(-0.5f, -0.5f, 0.0f));
+            if (shapes[i].face_count == 10 || shapes[i].face_count == 11) {
+                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, 0.5f, 0.5f));
+                shapes[i].model = glm::rotate(shapes[i].model, glm::radians(-f_radian_stack), glm::vec3(1.0f, 0.0f, 0.0f));
+                shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, -0.5f, -0.5f));
             }
 
             if (shapes[i].face_count == 6 || shapes[i].face_count == 7 || shapes[i].face_count == 2 || shapes[i].face_count == 3) {
