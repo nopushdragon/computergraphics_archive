@@ -42,6 +42,11 @@ GLuint vao, vbo;
 GLuint axis_vao, axis_vbo; // 좌표축을 위한 VAO, VBO
 
 //
+bool move_towards(float* current, float target, float speed);
+bool MoveObjectToTarget(float* current_d, float* current_e,
+    float target_d, float target_e,
+    float b_size_stack, float base_speed);
+
 bool axis_display = true;
 bool depth_on = true;
 
@@ -55,7 +60,8 @@ int isd = -1;
 int ise = -1;
 bool isc = false;
 bool isv = false;
-bool ist = false;
+int ist = -1;
+int isu = -1;
 
 float x_radian_stack_1 = 0.0f;
 float y_radian_stack_1 = 0.0f;
@@ -67,8 +73,8 @@ float e_length_stack_1 = 0.0f;
 float v_size_stack_1 = 1.0f;
 float v_j_radian_stack_1 = 0.0f;
 float v_g_radian_stack_1 = 0.0f;
-float t_goal_x_1, t_goal_y_1, t_goal_z_1;
-
+float t_final_d_1, t_final_e_1;
+float u_final_d_1, u_final_e_1;
 
 float x_radian_stack_2 = 0.0f;
 float y_radian_stack_2 = 0.0f;
@@ -80,7 +86,8 @@ float e_length_stack_2 = 0.0f;
 float v_size_stack_2 = 1.0f;
 float v_j_radian_stack_2 = 0.0f;
 float v_g_radian_stack_2 = 0.0f;
-float t_goal_x_2, t_goal_y_2, t_goal_z_2;
+float t_final_d_2, t_final_e_2;
+float u_final_d_2, u_final_e_2;
 //
 
 std::vector<GLfloat> allVertices;
@@ -137,6 +144,8 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
     InitAxisBuffer();
     LoadOBJ("15_cube.obj", 0);
     LoadOBJ("sphere.obj", 1);
+    LoadOBJ("15_pyramid.obj", 2);
+    LoadOBJ("donut.obj", 3);
 
     glutDisplayFunc(drawScene); //--- 출력 콜백 함수
     glutReshapeFunc(Reshape);
@@ -292,6 +301,9 @@ GLvoid drawScene() {
         if ((shapes[i].object_num == 0 ||shapes[i].object_num == 1) && !isc) {
             glDrawArrays(GL_TRIANGLES, first, vertexCount);
         }
+        else if ((shapes[i].object_num == 2 || shapes[i].object_num == 3) && isc) {
+            glDrawArrays(GL_TRIANGLES, first, vertexCount);
+        }
         first += vertexCount;
     }
 
@@ -375,14 +387,69 @@ GLvoid Keyboard(unsigned char key, int x, int y)
         reset_bool();
         ise = 1;
         break;
-    case 't':
+    case 't': {
         reset_bool();
-        ist = true;
-        t_goal_x_1 = shapes[0].model[3][0];
+        float obj1_current_x = (-1.0f + d_length_stack_1) * b_size_stack_1;
+        float obj1_current_y = e_length_stack_1 * b_size_stack_1; // y축도 스케일 적용
+
+        float obj2_current_x = (1.0f + d_length_stack_2) * b_size_stack_2;
+        float obj2_current_y = e_length_stack_2 * b_size_stack_2; // y축도 스케일 적용
+
+        t_final_d_1 = (obj2_current_x / b_size_stack_1) - (-1.0f);
+        t_final_e_1 = (obj2_current_y / b_size_stack_1);
+
+        t_final_d_2 = (obj1_current_x / b_size_stack_2) - (1.0f);
+        t_final_e_2 = (obj1_current_y / b_size_stack_2);
+
+        ist = 0;
         break;
+    }
+    case 'u': {
+        reset_bool();
+        float obj1_current_x = (-1.0f + d_length_stack_1) * b_size_stack_1;
+        float obj1_current_y = e_length_stack_1 * b_size_stack_1; // y축도 스케일 적용
+
+        float obj2_current_x = (1.0f + d_length_stack_2) * b_size_stack_2;
+        float obj2_current_y = e_length_stack_2 * b_size_stack_2; // y축도 스케일 적용
+
+        u_final_d_1 = (obj2_current_x / b_size_stack_1) - (-1.0f);
+        u_final_e_1 = (obj2_current_y / b_size_stack_1);
+        
+        u_final_d_2 = (obj1_current_x / b_size_stack_2) - (1.0f);
+        u_final_e_2 = (obj1_current_y / b_size_stack_2);
+
+        isu = 0;
+        break;
+    }
     case 'v':
         reset_bool();
-        isv = true;
+        isv = 0;
+        break;
+    case 'c':
+        isc = !isc;
+        break;
+    case 's':
+        x_radian_stack_1 = 0.0f;
+        y_radian_stack_1 = 0.0f;
+        r_radian_stack_1 = 0.0f;
+        a_size_stack_1 = 1.0f;
+        b_size_stack_1 = 1.0f;
+        d_length_stack_1 = 0.0f;
+        e_length_stack_1 = 0.0f;
+        v_size_stack_1 = 1.0f;
+        v_j_radian_stack_1 = 0.0f;
+        v_g_radian_stack_1 = 0.0f;
+
+        x_radian_stack_2 = 0.0f;
+        y_radian_stack_2 = 0.0f;
+        r_radian_stack_2 = 0.0f;
+        a_size_stack_2 = 1.0f;
+        b_size_stack_2 = 1.0f;
+        d_length_stack_2 = 0.0f;
+        e_length_stack_2 = 0.0f;
+        v_size_stack_2 = 1.0f;
+        v_j_radian_stack_2 = 0.0f;
+        v_g_radian_stack_2 = 0.0f;
         break;
     case VK_TAB:
         axis_display = !axis_display;
@@ -404,6 +471,8 @@ void reset_bool() {
     isd = -1;
     ise = -1;
     isv = false;
+    ist = -1;
+    isu = -1;
 }
 
 GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
@@ -439,7 +508,7 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
         }
         else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
             shapes[i].model = glm::translate(shapes[i].model, glm::vec3(0.0f, e_length_stack_2, 0.0f));
-            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(d_length_stack_1, 0.0f, 0.0f));
+            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(d_length_stack_2, 0.0f, 0.0f));
             shapes[i].model = glm::translate(shapes[i].model, glm::vec3(1.0f, 0.0f, 0.0f));
         }
 
@@ -531,6 +600,48 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
         v_j_radian_stack_2 += 1.0f;
         v_g_radian_stack_2 += 1.0f;
     }
+    else if (ist == 0) {
+        const float base_speed = 0.05f;
+        static int t_cnt = 0;
+        t_cnt = (t_cnt + 1) % 2;
+
+        bool obj1_done = MoveObjectToTarget(&d_length_stack_1, &e_length_stack_1,1.0f, 0.0f,b_size_stack_1, base_speed);
+        bool obj2_done = MoveObjectToTarget(&d_length_stack_2, &e_length_stack_2,-1.0f, 0.0f, b_size_stack_2, base_speed);
+
+        if (obj1_done && obj2_done) {
+            ist = 1;
+        }
+    }
+    else if (ist == 1) {
+        const float base_speed = 0.05f;
+
+        bool obj1_done = MoveObjectToTarget(&d_length_stack_1, &e_length_stack_1,t_final_d_1, t_final_e_1,b_size_stack_1, base_speed);
+        bool obj2_done = MoveObjectToTarget(&d_length_stack_2, &e_length_stack_2,t_final_d_2, t_final_e_2,b_size_stack_2, base_speed);
+
+        if (obj1_done && obj2_done) {
+            ist = -1;
+        }
+    }
+    else if (isu == 0) {
+        const float base_speed = 0.05f;
+
+        bool obj1_done = MoveObjectToTarget(&d_length_stack_1, &e_length_stack_1, 1.0f, 1.0f, b_size_stack_1, base_speed);
+        bool obj2_done = MoveObjectToTarget(&d_length_stack_2, &e_length_stack_2, -1.0f, -1.0f, b_size_stack_2, base_speed);
+
+        if (obj1_done && obj2_done) {
+            isu = 1;
+        }
+    }
+    else if (isu == 1) {
+        const float base_speed = 0.05f;
+
+        bool obj1_done = MoveObjectToTarget(&d_length_stack_1, &e_length_stack_1,u_final_d_1, u_final_e_1,b_size_stack_1, base_speed);
+        bool obj2_done = MoveObjectToTarget(&d_length_stack_2, &e_length_stack_2,u_final_d_2, u_final_e_2,b_size_stack_2, base_speed);
+
+        if (obj1_done && obj2_done) {
+            isu = -1;
+        }
+    }
 
     glutPostRedisplay(); // 다시 그리기 요청
     glutTimerFunc(1000 / 60, Timer, 1); //--- 타이머 콜백함수 지정 (60 FPS)
@@ -539,6 +650,60 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
 GLvoid Mouse(int button, int state, int x, int y) {
 
 }
+
+bool move_towards(float* current, float target, float speed) {
+    if (*current < target) {
+        *current += speed;
+        if (*current >= target) {
+            *current = target; 
+            return true;
+        }
+    }
+    else if (*current > target) {
+        *current -= speed;
+        if (*current <= target) {
+            *current = target; 
+            return true;
+        }
+    }
+
+    return (*current == target);
+}
+
+bool MoveObjectToTarget(float* current_d, float* current_e, float target_d, float target_e, float b_size_stack, float base_speed)
+{
+    float speed = base_speed / (b_size_stack + 0.0001f);
+    bool d_done = move_towards(current_d, target_d, speed);
+    bool e_done = move_towards(current_e, target_e, speed);
+    return d_done && e_done;
+}
+
+glm::vec3 GetWorldPos(int object_id) {
+    if (object_id == 1) { // 왼쪽 객체 (ID: 1)
+        float r = glm::radians(r_radian_stack_1);
+        float d = d_length_stack_1;
+        float e = e_length_stack_1;
+        float b = b_size_stack_1;
+        // Timer 함수에서 변환하는 순서 그대로 계산
+        float x = ((-1.0f + d) * cos(r)) * b;
+        float y = e * b;
+        float z = ((-1.0f + d) * sin(r)) * b;
+        return glm::vec3(x, y, z);
+    }
+    else { // 오른쪽 객체 (ID: 2)
+        float r = glm::radians(r_radian_stack_2);
+        float d = d_length_stack_2;
+        float e = e_length_stack_2;
+        float b = b_size_stack_2;
+        // Timer 함수에서 변환하는 순서 그대로 계산
+        float x = ((1.0f + d) * cos(r)) * b;
+        float y = e * b;
+        float z = ((1.0f + d) * sin(r)) * b;
+        return glm::vec3(x, y, z);
+    }
+}
+
+
 
 void InitBuffer()
 {
