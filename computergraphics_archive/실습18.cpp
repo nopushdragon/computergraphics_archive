@@ -298,7 +298,7 @@ GLvoid drawScene() {
         }
 
         int vertexCount = shapes[i].vertex.size() / 6;
-        if ((shapes[i].object_num == 0 ||shapes[i].object_num == 1) && !isc) {
+        if ((shapes[i].object_num == 0 || shapes[i].object_num == 1) && !isc) {
             glDrawArrays(GL_TRIANGLES, first, vertexCount);
         }
         else if ((shapes[i].object_num == 2 || shapes[i].object_num == 3) && isc) {
@@ -414,7 +414,7 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 
         u_final_d_1 = (obj2_current_x / b_size_stack_1) - (-1.0f);
         u_final_e_1 = (obj2_current_y / b_size_stack_1);
-        
+
         u_final_d_2 = (obj1_current_x / b_size_stack_2) - (1.0f);
         u_final_e_2 = (obj1_current_y / b_size_stack_2);
 
@@ -483,11 +483,11 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
         //스케일(원점)
         if (shapes[i].object_num == 0 || shapes[i].object_num == 2) {
             shapes[i].model = glm::scale(shapes[i].model, glm::vec3(b_size_stack_1));
-            
+
         }
         else if (shapes[i].object_num == 1 || shapes[i].object_num == 3) {
             shapes[i].model = glm::scale(shapes[i].model, glm::vec3(b_size_stack_2));
-            
+
         }
 
         //공전
@@ -548,15 +548,15 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
         if (now_object == 1 || now_object == 3) y_radian_stack_1 += 1.0f;
         if (now_object == 2 || now_object == 3) y_radian_stack_2 += 1.0f;
     }
-    else if(isy == 1){
+    else if (isy == 1) {
         if (now_object == 1 || now_object == 3) y_radian_stack_1 -= 1.0f;
         if (now_object == 2 || now_object == 3) y_radian_stack_2 -= 1.0f;
     }
     else if (isr == 0) {
         if (now_object == 1 || now_object == 3) r_radian_stack_1 += 1.0f;
         if (now_object == 2 || now_object == 3) r_radian_stack_2 += 1.0f;
-    }                                           
-    else if (isr == 1) {                        
+    }
+    else if (isr == 1) {
         if (now_object == 1 || now_object == 3) r_radian_stack_1 -= 1.0f;
         if (now_object == 2 || now_object == 3) r_radian_stack_2 -= 1.0f;
     }
@@ -571,8 +571,8 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
     else if (isb == 0) {
         if (now_object == 1 || now_object == 3) b_size_stack_1 += 0.005f;
         if (now_object == 2 || now_object == 3) b_size_stack_2 += 0.005f;
-    }                                           
-    else if (isb == 1) {                        
+    }
+    else if (isb == 1) {
         if (now_object == 1 || now_object == 3) b_size_stack_1 -= 0.005f;
         if (now_object == 2 || now_object == 3) b_size_stack_2 -= 0.005f;
     }
@@ -587,8 +587,8 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
     else if (ise == 0) {
         if (now_object == 1 || now_object == 3) e_length_stack_1 += 0.005f;
         if (now_object == 2 || now_object == 3) e_length_stack_2 += 0.005f;
-    }                                           
-    else if (ise == 1) {                        
+    }
+    else if (ise == 1) {
         if (now_object == 1 || now_object == 3) e_length_stack_1 -= 0.005f;
         if (now_object == 2 || now_object == 3) e_length_stack_2 -= 0.005f;
     }
@@ -605,8 +605,8 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
         static int t_cnt = 0;
         t_cnt = (t_cnt + 1) % 2;
 
-        bool obj1_done = MoveObjectToTarget(&d_length_stack_1, &e_length_stack_1,1.0f, 0.0f,b_size_stack_1, base_speed);
-        bool obj2_done = MoveObjectToTarget(&d_length_stack_2, &e_length_stack_2,-1.0f, 0.0f, b_size_stack_2, base_speed);
+        bool obj1_done = MoveObjectToTarget(&d_length_stack_1, &e_length_stack_1, 1.0f, 0.0f, b_size_stack_1, base_speed);
+        bool obj2_done = MoveObjectToTarget(&d_length_stack_2, &e_length_stack_2, -1.0f, 0.0f, b_size_stack_2, base_speed);
 
         if (obj1_done && obj2_done) {
             ist = 1;
@@ -615,8 +615,8 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
     else if (ist == 1) {
         const float base_speed = 0.05f;
 
-        bool obj1_done = MoveObjectToTarget(&d_length_stack_1, &e_length_stack_1,t_final_d_1, t_final_e_1,b_size_stack_1, base_speed);
-        bool obj2_done = MoveObjectToTarget(&d_length_stack_2, &e_length_stack_2,t_final_d_2, t_final_e_2,b_size_stack_2, base_speed);
+        bool obj1_done = MoveObjectToTarget(&d_length_stack_1, &e_length_stack_1, t_final_d_1, t_final_e_1, b_size_stack_1, base_speed);
+        bool obj2_done = MoveObjectToTarget(&d_length_stack_2, &e_length_stack_2, t_final_d_2, t_final_e_2, b_size_stack_2, base_speed);
 
         if (obj1_done && obj2_done) {
             ist = -1;
@@ -635,8 +635,8 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
     else if (isu == 1) {
         const float base_speed = 0.05f;
 
-        bool obj1_done = MoveObjectToTarget(&d_length_stack_1, &e_length_stack_1,u_final_d_1, u_final_e_1,b_size_stack_1, base_speed);
-        bool obj2_done = MoveObjectToTarget(&d_length_stack_2, &e_length_stack_2,u_final_d_2, u_final_e_2,b_size_stack_2, base_speed);
+        bool obj1_done = MoveObjectToTarget(&d_length_stack_1, &e_length_stack_1, u_final_d_1, u_final_e_1, b_size_stack_1, base_speed);
+        bool obj2_done = MoveObjectToTarget(&d_length_stack_2, &e_length_stack_2, u_final_d_2, u_final_e_2, b_size_stack_2, base_speed);
 
         if (obj1_done && obj2_done) {
             isu = -1;
@@ -655,14 +655,14 @@ bool move_towards(float* current, float target, float speed) {
     if (*current < target) {
         *current += speed;
         if (*current >= target) {
-            *current = target; 
+            *current = target;
             return true;
         }
     }
     else if (*current > target) {
         *current -= speed;
         if (*current <= target) {
-            *current = target; 
+            *current = target;
             return true;
         }
     }
