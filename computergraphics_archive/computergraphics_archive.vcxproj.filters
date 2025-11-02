@@ -111,6 +111,9 @@
     <ClCompile Include="a.cpp">
       <Filter>소스 파일\실습</Filter>
     </ClCompile>
+    <ClCompile Include="실습20.cpp">
+      <Filter>소스 파일\실습</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="vertex.glsl">
@@ -119,5 +122,16 @@
     <None Include="fragment.glsl">
       <Filter>헤더 파일</Filter>
     </None>
+    <None Include="1fragment.glsl">
+      <Filter>헤더 파일</Filter>
+    </None>
+    <None Include="1vertex.glsl">
+      <Filter>헤더 파일</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="dtd.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
