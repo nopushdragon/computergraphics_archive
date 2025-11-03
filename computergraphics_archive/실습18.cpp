@@ -423,7 +423,7 @@ GLvoid Keyboard(unsigned char key, int x, int y)
     }
     case 'v':
         reset_bool();
-        isv = 0;
+        isv = true;
         break;
     case 'c':
         isc = !isc;

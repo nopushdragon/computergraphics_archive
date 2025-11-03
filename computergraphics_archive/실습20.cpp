@@ -8,6 +8,7 @@
 #include <glm/ext.hpp>
 #include "dtd.h" 
 #define SIZE 600
+
 // 함수 선언
 void MakeVertexShaders();
 void MakeFragmentShaders();

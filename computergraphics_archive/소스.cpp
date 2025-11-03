@@ -1,12 +1,5 @@
-#define _CRT_SECURE_NO_WARNINGS //--- ÇÁ·Î±×·¥ ¸Ç ¾Õ¿¡ ¼±¾ğÇÒ °Í
+ï»¿#define _CRT_SECURE_NO_WARNINGS //--- í”„ë¡œê·¸ë¨ ë§¨ ì•ì— ì„ ì–¸í•  ê²ƒ
 #define MAX_LINE_LENGTH 256
-
-#define BOX_SIZE  1.0f
-#define CUBE_SIZE_1 0.1f
-#define CUBE_SIZE_2 0.2f
-#define CUBE_SIZE_3 0.3f
-#define SPHERE_SIZE 0.2f
-
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -38,47 +31,44 @@ void InitAxisBuffer();
 void LoadOBJ(const char* filename, int object_num);
 void reset_bool();
 
-//--- ÇÊ¿äÇÑ º¯¼ö ¼±¾ğ
+//--- í•„ìš”í•œ ë³€ìˆ˜ ì„ ì–¸
 GLint width, height;
-GLuint shaderProgramID; //--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ÀÌ¸§
-GLuint vertexShader; //--- ¹öÅØ½º ¼¼ÀÌ´õ °´Ã¼
-GLuint fragmentShader; //--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ °´Ã¼
+GLuint shaderProgramID; //--- ì„¸ì´ë” í”„ë¡œê·¸ë¨ ì´ë¦„
+GLuint vertexShader; //--- ë²„í…ìŠ¤ ì„¸ì´ë” ê°ì²´
+GLuint fragmentShader; //--- í”„ë˜ê·¸ë¨¼íŠ¸ ì„¸ì´ë” ê°ì²´
 GLuint vao, vbo;
-GLuint axis_vao, axis_vbo; // ÁÂÇ¥ÃàÀ» À§ÇÑ VAO, VBO
+GLuint axis_vao, axis_vbo; // ì¢Œí‘œì¶•ì„ ìœ„í•œ VAO, VBO
 
 //
 bool axis_display = true;
 bool depth_on = true;
 
-float x_cam = 0.0f;
-float y_cam = 0.0f;
-float z_cam = 4.0f;
+float x_cam = 1.0f;
+float y_cam = 1.0f;
+float z_cam = 1.0f;
 float x_at = 0.0f;
 float y_at = 0.0f;
 float z_at = 0.0f;
 //
 // 
-// SM_Bank °ü·Ã »ó¼ö (Sphere°¡ 8ºÎÅÍ 12±îÁö 5°³¶ó°í °¡Á¤)
-#define SPHERE_END_INDEX 12 
-#define SM_BANK_OBJECT_NUM 13
-#define SM_BANK_START_INDEX (SPHERE_END_INDEX + 1)
+// SM_Bank ê´€ë ¨ ìƒìˆ˜ (Sphereê°€ 8ë¶€í„° 12ê¹Œì§€ 5ê°œë¼ê³  ê°€ì •)
 
-// SM_Bank À§Ä¡/Å©±â Á¶Á¤À» À§ÇÑ º¯¼ö (static float º¯¼öµé »çÀÌ¿¡ Ãß°¡)
-static float sm_bank_y_offset = -0.5f; // YÃà ÃÊ±â À§Ä¡ (¹Ù´Ú Áß¾Ó¿¡ °¡±õ°Ô)
-static float sm_bank_scale = 0.005f;    // OBJ ÆÄÀÏ Å©±â¿¡ ¸ÂÃç ÀûÀıÈ÷ Ãà¼Ò
+// SM_Bank ìœ„ì¹˜/í¬ê¸° ì¡°ì •ì„ ìœ„í•œ ë³€ìˆ˜ (static float ë³€ìˆ˜ë“¤ ì‚¬ì´ì— ì¶”ê°€)
+static float sm_bank_y_offset = -0.5f; // Yì¶• ì´ˆê¸° ìœ„ì¹˜ (ë°”ë‹¥ ì¤‘ì•™ì— ê°€ê¹ê²Œ)
+static float sm_bank_scale = 0.5f;    // OBJ íŒŒì¼ í¬ê¸°ì— ë§ì¶° ì ì ˆíˆ ì¶•ì†Œ
 
-struct Material {   //ÀçÁú
+struct Material {   //ì¬ì§ˆ
     std::string name;
     glm::vec3 ambient = glm::vec3(0.8f); // Ka
     glm::vec3 diffuse = glm::vec3(0.8f); // Kd
-    // ÇÊ¿äÇÑ °æ¿ì ´Ù¸¥ ¼Ó¼ºµµ Ãß°¡ °¡´É
+    // í•„ìš”í•œ ê²½ìš° ë‹¤ë¥¸ ì†ì„±ë„ ì¶”ê°€ ê°€ëŠ¥
 };
 std::vector<Material> materials;
 
 struct OBB {
-    glm::vec3 center = glm::vec3(0.0f);     // OBBÀÇ Áß½É (¿ùµå ÁÂÇ¥°è)
-    glm::vec3 u[3];                         // OBBÀÇ ¼¼ Á¤±ÔÁ÷±³ Ãà (u[0]=xÃà, u[1]=yÃà, u[2]=zÃà)
-    glm::vec3 half_length = glm::vec3(0.0f); // °¢ ÃàÀ» µû¸¥ Áß½ÉÀ¸·ÎºÎÅÍÀÇ ¹İÄ¡¼ö (Local Space)
+    glm::vec3 center = glm::vec3(0.0f);     // OBBì˜ ì¤‘ì‹¬ (ì›”ë“œ ì¢Œí‘œê³„)
+    glm::vec3 u[3];                         // OBBì˜ ì„¸ ì •ê·œì§êµ ì¶• (u[0]=xì¶•, u[1]=yì¶•, u[2]=zì¶•)
+    glm::vec3 half_length = glm::vec3(0.0f); // ê° ì¶•ì„ ë”°ë¥¸ ì¤‘ì‹¬ìœ¼ë¡œë¶€í„°ì˜ ë°˜ì¹˜ìˆ˜ (Local Space)
 };
 
 
@@ -89,10 +79,10 @@ struct SHAPE {
     int face_count;
     int object_num;
 
-    // OBB °ü·Ã Ãß°¡ Ç×¸ñ
-    OBB local_obb;  // ¸ğµ¨¸µ ½ÃÁ¡ÀÇ ·ÎÄÃ OBB (Model Matrix°¡ IdentityÀÏ ¶§)
-    OBB world_obb;  // ÇöÀç ÇÁ·¹ÀÓÀÇ ¿ùµå OBB (Model Matrix Àû¿ë ÈÄ)
-    bool is_colliding = false; // Ãæµ¹ »óÅÂ
+    // OBB ê´€ë ¨ ì¶”ê°€ í•­ëª©
+    OBB local_obb;  // ëª¨ë¸ë§ ì‹œì ì˜ ë¡œì»¬ OBB (Model Matrixê°€ Identityì¼ ë•Œ)
+    OBB world_obb;  // í˜„ì¬ í”„ë ˆì„ì˜ ì›”ë“œ OBB (Model Matrix ì ìš© í›„)
+    bool is_colliding = false; // ì¶©ëŒ ìƒíƒœ
 };
 std::vector<SHAPE> shapes;
 
@@ -121,38 +111,38 @@ char* filetobuf(const char* file)
     return buf; // Return the buffer
 }
 
-void main(int argc, char** argv) //--- À©µµ¿ì Ãâ·ÂÇÏ°í Äİ¹éÇÔ¼ö ¼³Á¤
+void main(int argc, char** argv) //--- ìœˆë„ìš° ì¶œë ¥í•˜ê³  ì½œë°±í•¨ìˆ˜ ì„¤ì •
 {
     width = 500;
     height = 500;
 
-    //--- À©µµ¿ì »ı¼ºÇÏ±â
+    //--- ìœˆë„ìš° ìƒì„±í•˜ê¸°
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     glutInitWindowPosition(100, 100);
     glutInitWindowSize(width, height);
     glutCreateWindow("Example1");
 
-    //--- GLEW ÃÊ±âÈ­ÇÏ±â
+    //--- GLEW ì´ˆê¸°í™”í•˜ê¸°
     glewExperimental = GL_TRUE;
     glewInit();
 
-    //--- ¼¼ÀÌ´õ ÀĞ¾î¿Í¼­ ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸¸µé±â: »ç¿ëÀÚ Á¤ÀÇÇÔ¼ö È£Ãâ
-    make_vertexShaders(); //--- ¹öÅØ½º ¼¼ÀÌ´õ ¸¸µé±â
-    make_fragmentShaders(); //--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ ¸¸µé±â
-    shaderProgramID = make_shaderProgram();	//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸¸µé±â
+    //--- ì„¸ì´ë” ì½ì–´ì™€ì„œ ì„¸ì´ë” í”„ë¡œê·¸ë¨ ë§Œë“¤ê¸°: ì‚¬ìš©ì ì •ì˜í•¨ìˆ˜ í˜¸ì¶œ
+    make_vertexShaders(); //--- ë²„í…ìŠ¤ ì„¸ì´ë” ë§Œë“¤ê¸°
+    make_fragmentShaders(); //--- í”„ë˜ê·¸ë¨¼íŠ¸ ì„¸ì´ë” ë§Œë“¤ê¸°
+    shaderProgramID = make_shaderProgram();	//--- ì„¸ì´ë” í”„ë¡œê·¸ë¨ ë§Œë“¤ê¸°
 
-    // ¹öÆÛ(VAO/VBO/EBO) ÃÊ±âÈ­ (¼ÎÀÌ´õ ÇÁ·Î±×·¥ »ı¼º ÈÄ È£Ãâ)
+    // ë²„í¼(VAO/VBO/EBO) ì´ˆê¸°í™” (ì…°ì´ë” í”„ë¡œê·¸ë¨ ìƒì„± í›„ í˜¸ì¶œ)
     InitBuffer();
     InitAxisBuffer();
     LoadOBJ("SM_Bank.obj", 0);
 
-    glutDisplayFunc(drawScene); //--- Ãâ·Â Äİ¹é ÇÔ¼ö
+    glutDisplayFunc(drawScene); //--- ì¶œë ¥ ì½œë°± í•¨ìˆ˜
     glutReshapeFunc(Reshape);
     glutKeyboardFunc(Keyboard);
     glutMouseFunc(Mouse);
     glutMotionFunc(MouseMove);
-    glutTimerFunc(1000 / 60, Timer, 1); //--- Å¸ÀÌ¸Ó Äİ¹éÇÔ¼ö ÁöÁ¤ (60 FPS)
+    glutTimerFunc(1000 / 60, Timer, 1); //--- íƒ€ì´ë¨¸ ì½œë°±í•¨ìˆ˜ ì§€ì • (60 FPS)
 
     glutMainLoop();
 }
@@ -161,8 +151,8 @@ void make_vertexShaders()
 {
     GLchar* vertexSource;
 
-    //--- ¹öÅØ½º ¼¼ÀÌ´õ ÀĞ¾î ÀúÀåÇÏ°í ÄÄÆÄÀÏ ÇÏ±â
-    //--- filetobuf: »ç¿ëÀÚÁ¤ÀÇ ÇÔ¼ö·Î ÅØ½ºÆ®¸¦ ÀĞ¾î¼­ ¹®ÀÚ¿­¿¡ ÀúÀåÇÏ´Â ÇÔ¼ö
+    //--- ë²„í…ìŠ¤ ì„¸ì´ë” ì½ì–´ ì €ì¥í•˜ê³  ì»´íŒŒì¼ í•˜ê¸°
+    //--- filetobuf: ì‚¬ìš©ìì •ì˜ í•¨ìˆ˜ë¡œ í…ìŠ¤íŠ¸ë¥¼ ì½ì–´ì„œ ë¬¸ìì—´ì— ì €ì¥í•˜ëŠ” í•¨ìˆ˜
 
     vertexSource = filetobuf("vertex.glsl");
     vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -175,18 +165,18 @@ void make_vertexShaders()
     if (!result)
     {
         glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
-        std::cerr << "ERROR: vertex shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << std::endl;
+        std::cerr << "ERROR: vertex shader ì»´íŒŒì¼ ì‹¤íŒ¨\n" << errorLog << std::endl;
         return;
     }
 }
 
-//--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ °´Ã¼ ¸¸µé±â
+//--- í”„ë˜ê·¸ë¨¼íŠ¸ ì„¸ì´ë” ê°ì²´ ë§Œë“¤ê¸°
 void make_fragmentShaders()
 {
     GLchar* fragmentSource;
 
-    //--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ ÀĞ¾î ÀúÀåÇÏ°í ÄÄÆÄÀÏÇÏ±â
-    fragmentSource = filetobuf("fragment.glsl"); // ÇÁ·¡±×¼¼ÀÌ´õ ÀĞ¾î¿À±â
+    //--- í”„ë˜ê·¸ë¨¼íŠ¸ ì„¸ì´ë” ì½ì–´ ì €ì¥í•˜ê³  ì»´íŒŒì¼í•˜ê¸°
+    fragmentSource = filetobuf("fragment.glsl"); // í”„ë˜ê·¸ì„¸ì´ë” ì½ì–´ì˜¤ê¸°
     fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
     glCompileShader(fragmentShader);
@@ -197,7 +187,7 @@ void make_fragmentShaders()
     if (!result)
     {
         glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
-        std::cerr << "ERROR: frag_shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << std::endl;
+        std::cerr << "ERROR: frag_shader ì»´íŒŒì¼ ì‹¤íŒ¨\n" << errorLog << std::endl;
         return;
     }
 }
@@ -207,38 +197,38 @@ GLuint make_shaderProgram()
     GLint result;
     GLchar* errorLog = NULL;
     GLuint shaderID;
-    shaderID = glCreateProgram(); //--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸¸µé±â
-    glAttachShader(shaderID, vertexShader); //--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥¿¡ ¹öÅØ½º ¼¼ÀÌ´õ ºÙÀÌ±â
-    glAttachShader(shaderID, fragmentShader); //--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥¿¡ ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ ºÙÀÌ±â
-    glLinkProgram(shaderID); //--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸µÅ©ÇÏ±â
-    glDeleteShader(vertexShader); //--- ¼¼ÀÌ´õ °´Ã¼¸¦ ¼¼ÀÌ´õ ÇÁ·Î±×·¥¿¡ ¸µÅ©ÇßÀ½À¸·Î, ¼¼ÀÌ´õ °´Ã¼ ÀÚÃ¼´Â »èÁ¦ °¡´É
+    shaderID = glCreateProgram(); //--- ì„¸ì´ë” í”„ë¡œê·¸ë¨ ë§Œë“¤ê¸°
+    glAttachShader(shaderID, vertexShader); //--- ì„¸ì´ë” í”„ë¡œê·¸ë¨ì— ë²„í…ìŠ¤ ì„¸ì´ë” ë¶™ì´ê¸°
+    glAttachShader(shaderID, fragmentShader); //--- ì„¸ì´ë” í”„ë¡œê·¸ë¨ì— í”„ë˜ê·¸ë¨¼íŠ¸ ì„¸ì´ë” ë¶™ì´ê¸°
+    glLinkProgram(shaderID); //--- ì„¸ì´ë” í”„ë¡œê·¸ë¨ ë§í¬í•˜ê¸°
+    glDeleteShader(vertexShader); //--- ì„¸ì´ë” ê°ì²´ë¥¼ ì„¸ì´ë” í”„ë¡œê·¸ë¨ì— ë§í¬í–ˆìŒìœ¼ë¡œ, ì„¸ì´ë” ê°ì²´ ìì²´ëŠ” ì‚­ì œ ê°€ëŠ¥
     glDeleteShader(fragmentShader);
-    glGetProgramiv(shaderID, GL_LINK_STATUS, &result); // ---¼¼ÀÌ´õ°¡ Àß ¿¬°áµÇ¾ú´ÂÁö Ã¼Å©ÇÏ±â
+    glGetProgramiv(shaderID, GL_LINK_STATUS, &result); // ---ì„¸ì´ë”ê°€ ì˜ ì—°ê²°ë˜ì—ˆëŠ”ì§€ ì²´í¬í•˜ê¸°
     if (!result) {
         glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
-        std::cerr << "ERROR: shader program ¿¬°á ½ÇÆĞ\n" << errorLog << std::endl;
+        std::cerr << "ERROR: shader program ì—°ê²° ì‹¤íŒ¨\n" << errorLog << std::endl;
         return false;
     }
-    glUseProgram(shaderID); //--- ¸¸µé¾îÁø ¼¼ÀÌ´õ ÇÁ·Î±×·¥ »ç¿ëÇÏ±â
-    //--- ¿©·¯ °³ÀÇ ¼¼ÀÌ´õÇÁ·Î±×·¥ ¸¸µé ¼ö ÀÖ°í, ±× Áß ÇÑ°³ÀÇ ÇÁ·Î±×·¥À» »ç¿ëÇÏ·Á¸é
-    //--- glUseProgram ÇÔ¼ö¸¦ È£ÃâÇÏ¿© »ç¿ë ÇÒ Æ¯Á¤ ÇÁ·Î±×·¥À» ÁöÁ¤ÇÑ´Ù.
-    //--- »ç¿ëÇÏ±â Á÷Àü¿¡ È£ÃâÇÒ ¼ö ÀÖ´Ù.
+    glUseProgram(shaderID); //--- ë§Œë“¤ì–´ì§„ ì„¸ì´ë” í”„ë¡œê·¸ë¨ ì‚¬ìš©í•˜ê¸°
+    //--- ì—¬ëŸ¬ ê°œì˜ ì„¸ì´ë”í”„ë¡œê·¸ë¨ ë§Œë“¤ ìˆ˜ ìˆê³ , ê·¸ ì¤‘ í•œê°œì˜ í”„ë¡œê·¸ë¨ì„ ì‚¬ìš©í•˜ë ¤ë©´
+    //--- glUseProgram í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•˜ì—¬ ì‚¬ìš© í•  íŠ¹ì • í”„ë¡œê·¸ë¨ì„ ì§€ì •í•œë‹¤.
+    //--- ì‚¬ìš©í•˜ê¸° ì§ì „ì— í˜¸ì¶œí•  ìˆ˜ ìˆë‹¤.
     return shaderID;
 }
 
 void draw_axis()
 {
-    // ÁÂÇ¥ÃàÀº ¿øÁ¡¿¡ °íÁ¤µÇ¹Ç·Î ¸ğµ¨ Çà·ÄÀº ´ÜÀ§ Çà·ÄÀ» »ç¿ëÇÕ´Ï´Ù.
-    // view, projection Çà·ÄÀº drawScene¿¡¼­ ÀÌ¹Ì ¼ÎÀÌ´õ·Î Àü´ŞµÇ¾úÀ¸¹Ç·Î ÀçÀü¼ÛÇÒ ÇÊ¿ä°¡ ¾ø½À´Ï´Ù.
+    // ì¢Œí‘œì¶•ì€ ì›ì ì— ê³ ì •ë˜ë¯€ë¡œ ëª¨ë¸ í–‰ë ¬ì€ ë‹¨ìœ„ í–‰ë ¬ì„ ì‚¬ìš©í•©ë‹ˆë‹¤.
+    // view, projection í–‰ë ¬ì€ drawSceneì—ì„œ ì´ë¯¸ ì…°ì´ë”ë¡œ ì „ë‹¬ë˜ì—ˆìœ¼ë¯€ë¡œ ì¬ì „ì†¡í•  í•„ìš”ê°€ ì—†ìŠµë‹ˆë‹¤.
     glm::mat4 model = glm::mat4(1.0f);
     GLuint modelLoc = glGetUniformLocation(shaderProgramID, "uModel");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
 
-    // ¼± ±½±â¸¦ 2.0À¸·Î ¼³Á¤ (±âº»°ªÀº 1.0)
+    // ì„  êµµê¸°ë¥¼ 2.0ìœ¼ë¡œ ì„¤ì • (ê¸°ë³¸ê°’ì€ 1.0)
     glLineWidth(2.0f);
 
     glBindVertexArray(axis_vao);
-    // 3°³ÀÇ ¼±ºĞ(ÃÑ 6°³ÀÇ Á¤Á¡)À» ±×¸³´Ï´Ù.
+    // 3ê°œì˜ ì„ ë¶„(ì´ 6ê°œì˜ ì •ì )ì„ ê·¸ë¦½ë‹ˆë‹¤.
     glDrawArrays(GL_LINES, 0, 6);
     glBindVertexArray(0);
 }
@@ -249,18 +239,18 @@ void UpdateBuffer()
 
     for (int i = 0; i < shapes.size(); i++)	allVertices.insert(allVertices.end(), shapes[i].vertex.begin(), shapes[i].vertex.end());
 
-    // ÇÕÃÄÁø µ¥ÀÌÅÍ·Î VBO ¾÷µ¥ÀÌÆ®
+    // í•©ì³ì§„ ë°ì´í„°ë¡œ VBO ì—…ë°ì´íŠ¸
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, allVertices.size() * sizeof(GLfloat), allVertices.data(), GL_DYNAMIC_DRAW);
 }
 
 GLvoid drawScene() {
     if (depth_on)
-        glEnable(GL_DEPTH_TEST); // Àº¸éÁ¦°Å
+        glEnable(GL_DEPTH_TEST); // ì€ë©´ì œê±°
     else
         glDisable(GL_DEPTH_TEST);
 
-    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(shaderProgramID);
@@ -289,6 +279,7 @@ GLvoid drawScene() {
     glBindVertexArray(vao);
     GLint first = 0;
     for (int i = 0; i < shapes.size(); i++) {
+
         glm::mat4 model = shapes[i].model;
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
@@ -306,7 +297,7 @@ GLvoid drawScene() {
     glutSwapBuffers();
 }
 
-GLvoid Reshape(int w, int h) //--- Äİ¹é ÇÔ¼ö: ´Ù½Ã ±×¸®±â Äİ¹é ÇÔ¼ö
+GLvoid Reshape(int w, int h) //--- ì½œë°± í•¨ìˆ˜: ë‹¤ì‹œ ê·¸ë¦¬ê¸° ì½œë°± í•¨ìˆ˜
 {
     glViewport(0, 0, w, h);
 }
@@ -316,9 +307,11 @@ GLvoid Keyboard(unsigned char key, int x, int y)
     switch (key) {
     case 'z':
         z_cam += 0.1f;
+        z_at += 0.1f;
         break;
     case 'Z':
         z_cam -= 0.1f;
+        z_at -= 0.1f;
         break;
     case 'h':
         depth_on = !depth_on;
@@ -331,24 +324,24 @@ GLvoid Keyboard(unsigned char key, int x, int y)
         break;
     }
 
-    glutPostRedisplay(); // ´Ù½Ã ±×¸®±â ¿äÃ»
+    glutPostRedisplay(); // ë‹¤ì‹œ ê·¸ë¦¬ê¸° ìš”ì²­
 }
 
-GLvoid Timer(int value) //--- Äİ¹é ÇÔ¼ö: Å¸ÀÌ¸Ó Äİ¹é ÇÔ¼ö
+GLvoid Timer(int value) //--- ì½œë°± í•¨ìˆ˜: íƒ€ì´ë¨¸ ì½œë°± í•¨ìˆ˜
 {
     //====================================================================
-    //¼±¾ğ
+    //ì„ ì–¸
     // 
     //====================================================================
-    // Ãæµ¹Ã³¸®
+    // ì¶©ëŒì²˜ë¦¬
     //====================================================================
-    //¸ğµ¨ Çà·Ä ¾÷µ¥ÀÌÆ®
+    //ëª¨ë¸ í–‰ë ¬ ì—…ë°ì´íŠ¸
     for (int i = 0; i < shapes.size(); i++) {
         update_world_obb(shapes[i]);
     }
 
-    glutPostRedisplay(); // ´Ù½Ã ±×¸®±â ¿äÃ»
-    glutTimerFunc(1000 / 60, Timer, 1); //--- Å¸ÀÌ¸Ó Äİ¹éÇÔ¼ö ÁöÁ¤ (60 FPS)
+    glutPostRedisplay(); // ë‹¤ì‹œ ê·¸ë¦¬ê¸° ìš”ì²­
+    glutTimerFunc(1000 / 60, Timer, 1); //--- íƒ€ì´ë¨¸ ì½œë°±í•¨ìˆ˜ ì§€ì • (60 FPS)
 }
 
 GLvoid Mouse(int button, int state, int x, int y) {
@@ -365,14 +358,14 @@ void InitBuffer()
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    // ÃÊ±â¿¡´Â ºó ¹öÆÛ
+    // ì´ˆê¸°ì—ëŠ” ë¹ˆ ë²„í¼
     glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
 
-    // --- À§Ä¡ ¼Ó¼º (location = 0, vec3)
+    // --- ìœ„ì¹˜ ì†ì„± (location = 0, vec3)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // --- »ö»ó ¼Ó¼º (location = 1, vec3)
+    // --- ìƒ‰ìƒ ì†ì„± (location = 1, vec3)
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
@@ -381,7 +374,7 @@ void InitBuffer()
 
 void InitAxisBuffer()
 {
-    // X, Y, Z ÃàÀ» ³ªÅ¸³»´Â 6°³ÀÇ Á¤Á¡ µ¥ÀÌÅÍ. °¢ Á¤Á¡Àº (x, y, z, r, g, b) Çü½ÄÀÔ´Ï´Ù.
+    // X, Y, Z ì¶•ì„ ë‚˜íƒ€ë‚´ëŠ” 6ê°œì˜ ì •ì  ë°ì´í„°. ê° ì •ì ì€ (x, y, z, r, g, b) í˜•ì‹ì…ë‹ˆë‹¤.
     GLfloat axis_vertices[] = {
         // X-axis (Red)
         -1.0f, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f,
@@ -401,11 +394,11 @@ void InitAxisBuffer()
     glBindBuffer(GL_ARRAY_BUFFER, axis_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(axis_vertices), axis_vertices, GL_STATIC_DRAW);
 
-    // À§Ä¡ ¼Ó¼º (location = 0)
+    // ìœ„ì¹˜ ì†ì„± (location = 0)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // »ö»ó ¼Ó¼º (location = 1)
+    // ìƒ‰ìƒ ì†ì„± (location = 1)
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
@@ -418,7 +411,7 @@ struct Vertex {
 
 struct Face {
     unsigned int v1, v2, v3; // 0-based vertex indices
-    int material_index;      // ÀçÁú ÀÎµ¦½º
+    int material_index;      // ì¬ì§ˆ ì¸ë±ìŠ¤
 };
 
 struct Model {
@@ -426,6 +419,7 @@ struct Model {
     size_t vertex_count;
     Face* faces;
     size_t face_count;
+    std::string mtl_filename;
 };
 std::vector<Model> models;
 Model read_obj_file(const char* filename);
@@ -440,41 +434,41 @@ Model read_obj_file(const char* filename) {
     Model model = { 0 };
     FILE* file;
 
-    // ÆÄÀÏ ¿­±â (¿À·ù Ã³¸®)
+    // íŒŒì¼ ì—´ê¸° (ì˜¤ë¥˜ ì²˜ë¦¬)
     if (fopen_s(&file, filename, "r") != 0 || file == NULL) {
         perror("Error opening file");
         exit(EXIT_FAILURE);
     }
     char line[MAX_LINE_LENGTH];
 
-    // ÀÓ½Ã ÀúÀå¼Ò
+    // ì„ì‹œ ì €ì¥ì†Œ
     std::string mtl_filename = "";
-    std::vector<Vertex> v_positions_temp; // v µ¥ÀÌÅÍ¸¦ ÀÓ½Ã·Î ÀúÀå
-    std::vector<Face> faces_temp;         // Face µ¥ÀÌÅÍ¸¦ ÀÓ½Ã·Î ÀúÀå
+    std::vector<Vertex> v_positions_temp; // v ë°ì´í„°ë¥¼ ì„ì‹œë¡œ ì €ì¥
+    std::vector<Face> faces_temp;         // Face ë°ì´í„°ë¥¼ ì„ì‹œë¡œ ì €ì¥
 
-    // ÀçÁú °ü·Ã »óÅÂ
-    int current_material_index = 0; // ±âº»°ª
+    // ì¬ì§ˆ ê´€ë ¨ ìƒíƒœ
+    int current_material_index = 0; // ê¸°ë³¸ê°’
 
-    // 1´Ü°è: ¸ğµç µ¥ÀÌÅÍ ÀĞ±â ¹× Face µ¥ÀÌÅÍ ºĞÇÒ
+    // 1ë‹¨ê³„: ëª¨ë“  ë°ì´í„° ì½ê¸° ë° Face ë°ì´í„° ë¶„í• 
     while (fgets(line, sizeof(line), file)) {
         read_newline(line);
 
         if (line[0] == 'v' && line[1] == ' ') {
-            // v ¶óÀÎ: Á¤Á¡ À§Ä¡ ÀúÀå
+            // v ë¼ì¸: ì •ì  ìœ„ì¹˜ ì €ì¥
             Vertex v;
             sscanf_s(line + 2, "%f %f %f", &v.x, &v.y, &v.z);
             v_positions_temp.push_back(v);
 
         }
         else if (strncmp(line, "mtllib ", 7) == 0) {
-            // mtllib ¶óÀÎ: MTL ÆÄÀÏ ÀÌ¸§ ÀúÀå
-            mtl_filename = std::string(line + 7);
+            // mtllib ë¼ì¸: MTL íŒŒì¼ ì´ë¦„ ì €ì¥
+            model.mtl_filename = std::string(line + 7);
 
         }
         else if (strncmp(line, "usemtl ", 7) == 0) {
-            // usemtl ¶óÀÎ: »ç¿ëÇÒ ÀçÁú ÀÎµ¦½º Ã£±â
+            // usemtl ë¼ì¸: ì‚¬ìš©í•  ì¬ì§ˆ ì¸ë±ìŠ¤ ì°¾ê¸°
             std::string mat_name = std::string(line + 7);
-            current_material_index = 0; // ¸ø Ã£À¸¸é 0¹ø (¶Ç´Â ±âº»°ª)
+            current_material_index = 0; // ëª» ì°¾ìœ¼ë©´ 0ë²ˆ (ë˜ëŠ” ê¸°ë³¸ê°’)
             for (size_t i = 0; i < materials.size(); ++i) {
                 if (materials[i].name == mat_name) {
                     current_material_index = (int)i;
@@ -484,13 +478,13 @@ Model read_obj_file(const char* filename) {
 
         }
         else if (line[0] == 'f' && line[1] == ' ') {
-            // f ¶óÀÎ: Á¤Á¡ ÀÎµ¦½º ÆÄ½Ì ¹× »ï°¢Çü ºĞÇÒ (ÇÙ½É ¼öÁ¤)
+            // f ë¼ì¸: ì •ì  ì¸ë±ìŠ¤ íŒŒì‹± ë° ì‚¼ê°í˜• ë¶„í•  (í•µì‹¬ ìˆ˜ì •)
 
-            // f ¶óÀÎ ÀüÃ¼¸¦ º¹»çÇÏ¿© ÆÄ½Ì¿¡ »ç¿ë (strtok_s´Â ¿øº» ¹®ÀÚ¿­À» ¼öÁ¤ÇÔ)
+            // f ë¼ì¸ ì „ì²´ë¥¼ ë³µì‚¬í•˜ì—¬ íŒŒì‹±ì— ì‚¬ìš© (strtok_sëŠ” ì›ë³¸ ë¬¸ìì—´ì„ ìˆ˜ì •í•¨)
             char line_copy[MAX_LINE_LENGTH];
             strcpy(line_copy, line + 2);
 
-            // ÅäÅ« ºĞ¸®: Á¤Á¡ ±×·ì (v/vt/vn)À» ¾ò±â À§ÇØ °ø¹éÀ¸·Î ºĞ¸®
+            // í† í° ë¶„ë¦¬: ì •ì  ê·¸ë£¹ (v/vt/vn)ì„ ì–»ê¸° ìœ„í•´ ê³µë°±ìœ¼ë¡œ ë¶„ë¦¬
             std::vector<unsigned int> v_indices_in_face;
             char* token_context = NULL;
             char* token = strtok_s(line_copy, " ", &token_context);
@@ -498,17 +492,17 @@ Model read_obj_file(const char* filename) {
             while (token != NULL) {
                 unsigned int v = 0, vt = 0, vn = 0;
 
-                // sscanf_s¸¦ »ç¿ëÇÏ¿© v ÀÎµ¦½º ÃßÃâ (´Ù¾çÇÑ Çü½Ä ´ëÀÀ)
-                // v/vt/vn, v//vn, v/vt, v ¸ğµÎ ´ëÀÀ °¡´ÉÇÏµµ·Ï %u%*s ÆĞÅÏ »ç¿ë
-                if (sscanf_s(token, "%u", &v) == 1) { // v ÀÎµ¦½º°¡ Ç×»ó Ã¹ ¹øÂ°¿¡ ¿À¹Ç·Î ÀÌ°Í¸¸ ÃßÃâ
+                // sscanf_së¥¼ ì‚¬ìš©í•˜ì—¬ v ì¸ë±ìŠ¤ ì¶”ì¶œ (ë‹¤ì–‘í•œ í˜•ì‹ ëŒ€ì‘)
+                // v/vt/vn, v//vn, v/vt, v ëª¨ë‘ ëŒ€ì‘ ê°€ëŠ¥í•˜ë„ë¡ %u%*s íŒ¨í„´ ì‚¬ìš©
+                if (sscanf_s(token, "%u", &v) == 1) { // v ì¸ë±ìŠ¤ê°€ í•­ìƒ ì²« ë²ˆì§¸ì— ì˜¤ë¯€ë¡œ ì´ê²ƒë§Œ ì¶”ì¶œ
                     v_indices_in_face.push_back(v);
                 }
-                // v/vt/vn, v//vn, v/vt ÇüÅÂ¿¡¼­´Â / µÚÀÇ ÀÎµ¦½º´Â ¹«½ÃµË´Ï´Ù.
+                // v/vt/vn, v//vn, v/vt í˜•íƒœì—ì„œëŠ” / ë’¤ì˜ ì¸ë±ìŠ¤ëŠ” ë¬´ì‹œë©ë‹ˆë‹¤.
 
                 token = strtok_s(NULL, " ", &token_context);
             }
 
-            // »ï°¢Çü ºĞÇÒ: N°¢Çü(N > 3)À» N-2°³ÀÇ »ï°¢ÇüÀ¸·Î ºĞÇÒ
+            // ì‚¼ê°í˜• ë¶„í• : Nê°í˜•(N > 3)ì„ N-2ê°œì˜ ì‚¼ê°í˜•ìœ¼ë¡œ ë¶„í• 
             // f v1 v2 v3 v4 -> (v1, v2, v3), (v1, v3, v4)
             if (v_indices_in_face.size() >= 3) {
                 unsigned int v_idx_start = v_indices_in_face[0];
@@ -528,7 +522,7 @@ Model read_obj_file(const char* filename) {
 
     fclose(file);
 
-    // 2´Ü°è: Model ±¸Á¶Ã¼¿¡ ÃÖÁ¾ µ¥ÀÌÅÍ ÇÒ´ç ¹× º¹»ç
+    // 2ë‹¨ê³„: Model êµ¬ì¡°ì²´ì— ìµœì¢… ë°ì´í„° í• ë‹¹ ë° ë³µì‚¬
     model.vertex_count = v_positions_temp.size();
     model.face_count = faces_temp.size();
 
@@ -542,7 +536,7 @@ Model read_obj_file(const char* filename) {
         exit(EXIT_FAILURE);
     }
 
-    // µ¥ÀÌÅÍ º¹»ç
+    // ë°ì´í„° ë³µì‚¬
     for (size_t i = 0; i < model.vertex_count; ++i) {
         model.vertices[i] = v_positions_temp[i];
     }
@@ -550,146 +544,150 @@ Model read_obj_file(const char* filename) {
         model.faces[i] = faces_temp[i];
     }
 
-    // MTL ÆÄÀÏ ·ÎµùÀº read_obj_fileÀÌ ¾Æ´Ï¶ó LoadOBJ¿¡¼­ È£ÃâµÇ¾î¾ß ÇÏ¹Ç·Î, 
-    // ÆÄÀÏ ÀÌ¸§¸¸ ÀúÀåÇÏ°í LoadOBJ¿¡¼­ Ã³¸®ÇÏµµ·Ï ÇÕ´Ï´Ù. (ÀÌÀü ±¸Çö À¯Áö)
-    // Âü°í: MTL ·Îµù ·ÎÁ÷Àº read_obj_file È£Ãâ Àü¿¡ ½ÇÇàµÇ¾î¾ß ÇÕ´Ï´Ù.
-    // ÀÌ ÇÔ¼öÀÇ ·ÎÁ÷ÀÌ ¹Ù²î¸é¼­ MTL ·ÎµùÀÌ 2´Ü°è·Î ºĞ¸®µÇ¹Ç·Î, 
-    // LoadOBJ ÇÔ¼ö¿¡¼­ ÀÌ read_obj_fileÀ» È£ÃâÇÏ±â Àü¿¡ read_mtl_fileÀ» ¸ÕÀú È£ÃâÇÏµµ·Ï ÇØ¾ß ÇÕ´Ï´Ù.
+    // MTL íŒŒì¼ ë¡œë”©ì€ read_obj_fileì´ ì•„ë‹ˆë¼ LoadOBJì—ì„œ í˜¸ì¶œë˜ì–´ì•¼ í•˜ë¯€ë¡œ, 
+    // íŒŒì¼ ì´ë¦„ë§Œ ì €ì¥í•˜ê³  LoadOBJì—ì„œ ì²˜ë¦¬í•˜ë„ë¡ í•©ë‹ˆë‹¤. (ì´ì „ êµ¬í˜„ ìœ ì§€)
+    // ì°¸ê³ : MTL ë¡œë”© ë¡œì§ì€ read_obj_file í˜¸ì¶œ ì „ì— ì‹¤í–‰ë˜ì–´ì•¼ í•©ë‹ˆë‹¤.
+    // ì´ í•¨ìˆ˜ì˜ ë¡œì§ì´ ë°”ë€Œë©´ì„œ MTL ë¡œë”©ì´ 2ë‹¨ê³„ë¡œ ë¶„ë¦¬ë˜ë¯€ë¡œ, 
+    // LoadOBJ í•¨ìˆ˜ì—ì„œ ì´ read_obj_fileì„ í˜¸ì¶œí•˜ê¸° ì „ì— read_mtl_fileì„ ë¨¼ì € í˜¸ì¶œí•˜ë„ë¡ í•´ì•¼ í•©ë‹ˆë‹¤.
 
     return model;
 }
 
 void LoadOBJ(const char* filename, int object_num)
 {
-    // 1. MTL ÆÄÀÏ ·Îµå È®ÀÎ (SM_Bank.obj´Â SM_Bank.mtlÀ» ÂüÁ¶ÇÔ)
-    // materials º¤ÅÍ°¡ ºñ¾îÀÖ´Ù¸é MTL ÆÄÀÏÀ» ·ÎµåÇÕ´Ï´Ù. (Áßº¹ ·Îµù ¹æÁö)
-    if (materials.empty() && strcmp(filename, "SM_Bank.obj") == 0) {
-        // SM_Bank.obj°¡ mtllib SM_Bank.mtlÀ» ÂüÁ¶ÇÏ¹Ç·Î, ÇÏµåÄÚµùµÈ ÀÌ¸§À¸·Î ·Îµå
-        read_mtl_file("SM_Bank.mtl");
+    // --- 1ë‹¨ê³„: MTL íŒŒì¼ ì´ë¦„ ì¶”ì¶œ (ì²« ë²ˆì§¸ íŒŒì‹±) ---
+    // read_obj_fileì„ í˜¸ì¶œí•˜ì—¬ OBJ íŒŒì¼ ë‚´ë¶€ì˜ "mtllib" ì§€ì‹œìë¥¼ ì°¾ìŠµë‹ˆë‹¤.
+    Model m_mtl_info = read_obj_file(filename);
+
+    // --- 2ë‹¨ê³„: MTL íŒŒì¼ ë¡œë“œ ---
+    if (!m_mtl_info.mtl_filename.empty()) {
+        // ğŸš¨ ì¤‘ìš”: ì´ì „ì— ë¡œë“œëœ ì¬ì§ˆì´ ìˆë‹¤ë©´ ëª¨ë‘ ì œê±°í•©ë‹ˆë‹¤.
+        // ì´ë ‡ê²Œ í•´ì•¼ materials[0]ì— SM_Bankì˜ "StreetBank" ì¬ì§ˆì´ ì˜¬ë°”ë¥´ê²Œ ì €ì¥ë©ë‹ˆë‹¤.
+        materials.clear();
+        read_mtl_file(m_mtl_info.mtl_filename.c_str());
     }
-    // *ÁÖÀÇ: read_obj_fileÀÌ OBJ ÆÄÀÏÀ» ÆÄ½ÌÇÏ´Â µ¿¾È usemtl Áö½ÃÀÚ¸¦ ¸¸³ª¸é 
-    //        ÀÌ¹Ì ·ÎµåµÈ materials º¤ÅÍ¿¡¼­ ÀçÁú ÀÎµ¦½º¸¦ Ã£À» ¼ö ÀÖ½À´Ï´Ù.
 
-    // 2. OBJ ÆÄÀÏ ÀĞ±â
-    Model m = read_obj_file(filename);
+    // 1ë‹¨ê³„ì—ì„œ ì‚¬ìš©í•œ ì„ì‹œ ëª¨ë¸ ë°ì´í„°ì˜ ë©”ëª¨ë¦¬ë¥¼ í•´ì œí•©ë‹ˆë‹¤.
+    free(m_mtl_info.vertices);
+    free(m_mtl_info.faces);
 
-    // --- OBB °è»êÀ» À§ÇÑ ·ÎÄÃ ÁÂÇ¥°èÀÇ ÃÖ¼Ò/ÃÖ´ë°ª ÃÊ±âÈ­
+    // --- 3ë‹¨ê³„: ìµœì¢… ëª¨ë¸ ë¡œë“œ (ë‘ ë²ˆì§¸ íŒŒì‹±) ---
+    // ì´ì œ materials ë²¡í„°ê°€ MTL íŒŒì¼ì˜ ì¬ì§ˆë¡œ ì±„ì›Œì ¸ ìˆìœ¼ë¯€ë¡œ,
+    // read_obj_fileì´ "usemtl" ì§€ì‹œìë¥¼ ë§Œë‚˜ë©´ ì˜¬ë°”ë¥¸ ì¬ì§ˆ ì¸ë±ìŠ¤ë¥¼ Faceì— ì„¤ì •í•©ë‹ˆë‹¤.
+    Model m_final = read_obj_file(filename);
+
+    // --- OBB ê³„ì‚°ì„ ìœ„í•œ ë¡œì»¬ ì¢Œí‘œê³„ì˜ ìµœì†Œ/ìµœëŒ€ê°’ ì´ˆê¸°í™” ---
     glm::vec3 min_v = glm::vec3(FLT_MAX);
     glm::vec3 max_v = glm::vec3(-FLT_MAX);
 
-    // Å¥ºê, ±¸Ã¼ µî object_numÀÌ 1 ÀÌ»óÀÎ µµÇü (´ÜÀÏ °´Ã¼ ·Îµù)
-
     SHAPE object_shape;
     object_shape.object_num = object_num;
-    object_shape.face_count = m.face_count;
+    object_shape.face_count = m_final.face_count;
 
-    // --- AABB °è»ê ¹× Á¤Á¡ µ¥ÀÌÅÍ ÇÕÄ¡±â ---
-    for (auto& m : models) {
-        for (size_t i = 0; i < m.face_count; i++) {
-            Face f = m.faces[i];
-            Vertex v1 = m.vertices[f.v1];
-            Vertex v2 = m.vertices[f.v2];
-            Vertex v3 = m.vertices[f.v3];
+    // --- AABB ê³„ì‚° ë° ì •ì  ë°ì´í„° í•©ì¹˜ê¸° (m_final ì‚¬ìš©) ---
+    for (size_t i = 0; i < m_final.face_count; i++) {
+        Face f = m_final.faces[i];
 
-            // AABB °è»ê (¸ğµç Á¤Á¡À» ´ë»óÀ¸·Î)
-            for (const Vertex* v : { &v1, &v2, &v3 }) {
-                min_v.x = glm::min(min_v.x, v->x);
-                min_v.y = glm::min(min_v.y, v->y);
-                min_v.z = glm::min(min_v.z, v->z);
-                max_v.x = glm::max(max_v.x, v->x);
-                max_v.y = glm::max(max_v.y, v->y);
-                max_v.z = glm::max(max_v.z, v->z);
-            }
+        Vertex v1 = m_final.vertices[f.v1];
+        Vertex v2 = m_final.vertices[f.v2];
+        Vertex v3 = m_final.vertices[f.v3];
 
-            // »ö»ó ¼³Á¤ (object_num ±âÁØ)
-            glm::vec3 color;
-            // ÀçÁúÀÌ ·ÎµåµÇ¾ú°í, À¯È¿ÇÑ ÀÎµ¦½ºÀÎ °æ¿ì
-            if (!materials.empty() && f.material_index >= 0 && (size_t)f.material_index < materials.size()) {
-                color = materials[f.material_index].diffuse;
-            }
-            else {
-                // ÀçÁúÀÌ ¾ø°Å³ª (mtllibÀÌ ¾ø°Å³ª mtl ÆÄÀÏ¿¡ ÀçÁúÀÌ ¾ø´Â °æ¿ì)
-                // ¶Ç´Â Ã£Áö ¸øÇÑ °æ¿ì (usemtl ÀÌ¸§ÀÌ Àß¸øµÈ °æ¿ì)
-                // object_num¿¡ µû¸¥ ±âº» »ö»óÀ» »ç¿ë (±âÁ¸ ·ÎÁ÷ À¯Áö)
-                color = glm::vec3(rdcolor(mt), rdcolor(mt), rdcolor(mt));
-            }
+        // AABB ê³„ì‚° (min_v, max_v ì—…ë°ì´íŠ¸)
+        min_v = glm::min(min_v, glm::vec3(v1.x, v1.y, v1.z));
+        max_v = glm::max(max_v, glm::vec3(v1.x, v1.y, v1.z));
+        min_v = glm::min(min_v, glm::vec3(v2.x, v2.y, v2.z));
+        max_v = glm::max(max_v, glm::vec3(v2.x, v2.y, v2.z));
+        min_v = glm::min(min_v, glm::vec3(v3.x, v3.y, v3.z));
+        max_v = glm::max(max_v, glm::vec3(v3.x, v3.y, v3.z));
 
-            // Á¤Á¡ µ¥ÀÌÅÍ (À§Ä¡ + »ö»ó) Ãß°¡
-            object_shape.vertex.insert(object_shape.vertex.end(), {
-                v1.x, v1.y, v1.z, color.r, color.g, color.b,
-                v2.x, v2.y, v2.z, color.r, color.g, color.b,
-                v3.x, v3.y, v3.z, color.r, color.g, color.b
-            });
+        // ì •ì  ë°ì´í„° (ìœ„ì¹˜ + ìƒ‰ìƒ) ì¶”ê°€
+        glm::vec3 color;
+
+        // f.material_indexê°€ 0ì´ê³ , materials[0]ì´ "ë¹¨ê°„ìƒ‰" ì¬ì§ˆì´ë¯€ë¡œ ì •ìƒ ì ìš©ë¨
+        if (!materials.empty() && f.material_index >= 0 && (size_t)f.material_index < materials.size()) {
+            color = materials[f.material_index].diffuse;
         }
+        else {
+            // "ì‘"ì€ ì¶œë ¥ë˜ì§€ ì•Šì•„ì•¼ í•¨
+            std::cout << "ì‘" << std::endl;
+            color = glm::vec3(rdcolor(mt), rdcolor(mt), rdcolor(mt));
+        }
+
+        object_shape.vertex.insert(object_shape.vertex.end(), {
+            v1.x, v1.y, v1.z, color.r, color.g, color.b,
+            v2.x, v2.y, v2.z, color.r, color.g, color.b,
+            v3.x, v3.y, v3.z, color.r, color.g, color.b
+            });
     }
 
-    // 2. **[OBB ¼³Á¤]**
+    // --- OBB ì„¤ì • ë° Model í–‰ë ¬ ì´ˆê¸°í™” ---
     glm::vec3 local_center = (min_v + max_v) * 0.5f;
     glm::vec3 local_half_length = (max_v - min_v) * 0.5f;
 
     object_shape.local_obb.center = local_center;
-    object_shape.local_obb.half_length = local_half_length; // OBJ ÆÄÀÏÀÇ ·ÎÄÃ Half-Length (Å¥ºê/±¸Ã¼´Â ¾à 1.0)
+    object_shape.local_obb.half_length = local_half_length;
     object_shape.local_obb.u[0] = glm::vec3(1.0f, 0.0f, 0.0f);
     object_shape.local_obb.u[1] = glm::vec3(0.0f, 1.0f, 0.0f);
     object_shape.local_obb.u[2] = glm::vec3(0.0f, 0.0f, 1.0f);
 
     shapes.push_back(object_shape);
 
-    free(m.vertices);
-    free(m.faces);
+    // 3ë‹¨ê³„ì—ì„œ ì‚¬ìš©í•œ ìµœì¢… ëª¨ë¸ ë°ì´í„° ë©”ëª¨ë¦¬ í•´ì œ
+    free(m_final.vertices);
+    free(m_final.faces);
 
     UpdateBuffer();
 }
 
 void update_world_obb(SHAPE& shape) {
-    // ¸ğµ¨ Çà·ÄÀÇ È¸Àü/½ºÄÉÀÏ ºÎºĞ (3x3) ÃßÃâ
+    // ëª¨ë¸ í–‰ë ¬ì˜ íšŒì „/ìŠ¤ì¼€ì¼ ë¶€ë¶„ (3x3) ì¶”ì¶œ
     glm::mat3 rotation_scale_mat = glm::mat3(shape.model);
 
-    // 1. ¿ùµå Áß½É º¯È¯
+    // 1. ì›”ë“œ ì¤‘ì‹¬ ë³€í™˜
     glm::vec4 local_center_h = glm::vec4(shape.local_obb.center, 1.0f);
     shape.world_obb.center = glm::vec3(shape.model * local_center_h);
 
-    // 2. ¿ùµå Ãà º¯È¯
+    // 2. ì›”ë“œ ì¶• ë³€í™˜
     for (int i = 0; i < 3; i++) {
         shape.world_obb.u[i] = glm::normalize(rotation_scale_mat * shape.local_obb.u[i]);
     }
 
-    // 3. **[ÇÙ½É ¼öÁ¤]** ¹İÄ¡¼ö ¼³Á¤: ½ºÄÉÀÏ º¤ÅÍ¸¦ ÃßÃâÇÏ¿© local_obb¿¡ Àû¿ë
-    // (¸ğµ¨ Çà·ÄÀÇ °¢ Ãà ±æÀÌ°¡ ½ºÄÉÀÏ ÆÑÅÍ¸¦ Æ÷ÇÔÇÔ)
+    // 3. **[í•µì‹¬ ìˆ˜ì •]** ë°˜ì¹˜ìˆ˜ ì„¤ì •: ìŠ¤ì¼€ì¼ ë²¡í„°ë¥¼ ì¶”ì¶œí•˜ì—¬ local_obbì— ì ìš©
+    // (ëª¨ë¸ í–‰ë ¬ì˜ ê° ì¶• ê¸¸ì´ê°€ ìŠ¤ì¼€ì¼ íŒ©í„°ë¥¼ í¬í•¨í•¨)
     glm::vec3 scale_factors = glm::vec3(
-        glm::length(rotation_scale_mat[0]), // XÃà ½ºÄÉÀÏ
-        glm::length(rotation_scale_mat[1]), // YÃà ½ºÄÉÀÏ
-        glm::length(rotation_scale_mat[2])  // ZÃà ½ºÄÉÀÏ
+        glm::length(rotation_scale_mat[0]), // Xì¶• ìŠ¤ì¼€ì¼
+        glm::length(rotation_scale_mat[1]), // Yì¶• ìŠ¤ì¼€ì¼
+        glm::length(rotation_scale_mat[2])  // Zì¶• ìŠ¤ì¼€ì¼
     );
 
-    // ·ÎÄÃ ¹İÄ¡¼ö¿¡ ½ºÄÉÀÏ ÆÑÅÍ¸¦ °öÇÏ¿© ¿ùµå ¹İÄ¡¼ö ¼³Á¤
-    // (ÁÖÀÇ: ¿©±â¼­´Â ºñ±ÕÀÏ ½ºÄÉÀÏÀ» Ã³¸®ÇÏ±â À§ÇØ °¢ ÃàÀÇ ½ºÄÉÀÏÀ» °³º°ÀûÀ¸·Î °öÇÕ´Ï´Ù.)
+    // ë¡œì»¬ ë°˜ì¹˜ìˆ˜ì— ìŠ¤ì¼€ì¼ íŒ©í„°ë¥¼ ê³±í•˜ì—¬ ì›”ë“œ ë°˜ì¹˜ìˆ˜ ì„¤ì •
+    // (ì£¼ì˜: ì—¬ê¸°ì„œëŠ” ë¹„ê· ì¼ ìŠ¤ì¼€ì¼ì„ ì²˜ë¦¬í•˜ê¸° ìœ„í•´ ê° ì¶•ì˜ ìŠ¤ì¼€ì¼ì„ ê°œë³„ì ìœ¼ë¡œ ê³±í•©ë‹ˆë‹¤.)
     shape.world_obb.half_length = shape.local_obb.half_length * scale_factors;
 }
 
 bool is_separated(const OBB& a, const OBB& b, const glm::vec3& axis) {
-    // ÃàÀÇ ±æÀÌ°¡ ³Ê¹« ÀÛÀ¸¸é ¹«½Ã (ºÎµ¿¼Ò¼öÁ¡ ¿ÀÂ÷ Ã³¸®)
+    // ì¶•ì˜ ê¸¸ì´ê°€ ë„ˆë¬´ ì‘ìœ¼ë©´ ë¬´ì‹œ (ë¶€ë™ì†Œìˆ˜ì  ì˜¤ì°¨ ì²˜ë¦¬)
     if (glm::length(axis) < 1e-6) return false;
 
-    // µÎ OBB Áß½É »çÀÌÀÇ º¤ÅÍ
+    // ë‘ OBB ì¤‘ì‹¬ ì‚¬ì´ì˜ ë²¡í„°
     glm::vec3 T = b.center - a.center;
 
-    // 1. Áß½É °£ °Å¸® Åõ¿µ
+    // 1. ì¤‘ì‹¬ ê°„ ê±°ë¦¬ íˆ¬ì˜
     float distance_proj = glm::abs(glm::dot(T, axis));
 
-    // 2. OBB AÀÇ '¹İÁö¸§' Åõ¿µ (°¢ ·ÎÄÃ ÃàÀÇ Åõ¿µ ±æÀÌÀÇ ÇÕ)
+    // 2. OBB Aì˜ 'ë°˜ì§€ë¦„' íˆ¬ì˜ (ê° ë¡œì»¬ ì¶•ì˜ íˆ¬ì˜ ê¸¸ì´ì˜ í•©)
     float radius_a =
         glm::abs(glm::dot(a.half_length.x * a.u[0], axis)) +
         glm::abs(glm::dot(a.half_length.y * a.u[1], axis)) +
         glm::abs(glm::dot(a.half_length.z * a.u[2], axis));
 
-    // 3. OBB BÀÇ '¹İÁö¸§' Åõ¿µ
+    // 3. OBB Bì˜ 'ë°˜ì§€ë¦„' íˆ¬ì˜
     float radius_b =
         glm::abs(glm::dot(b.half_length.x * b.u[0], axis)) +
         glm::abs(glm::dot(b.half_length.y * b.u[1], axis)) +
         glm::abs(glm::dot(b.half_length.z * b.u[2], axis));
 
-    // Áß½É °£ °Å¸®°¡ µÎ ¹İÁö¸§ÀÇ ÇÕº¸´Ù Å©¸é ºĞ¸® (Ãæµ¹ ¾Æ´Ô)
+    // ì¤‘ì‹¬ ê°„ ê±°ë¦¬ê°€ ë‘ ë°˜ì§€ë¦„ì˜ í•©ë³´ë‹¤ í¬ë©´ ë¶„ë¦¬ (ì¶©ëŒ ì•„ë‹˜)
     return distance_proj > (radius_a + radius_b);
 }
 
@@ -697,17 +695,17 @@ bool check_obb_collision(const SHAPE& shapeA, const SHAPE& shapeB) {
     const OBB& a = shapeA.world_obb;
     const OBB& b = shapeB.world_obb;
 
-    // 1. OBB AÀÇ Ãà 3°³ °Ë»ç
+    // 1. OBB Aì˜ ì¶• 3ê°œ ê²€ì‚¬
     for (int i = 0; i < 3; i++) {
         if (is_separated(a, b, a.u[i])) return false;
     }
 
-    // 2. OBB BÀÇ Ãà 3°³ °Ë»ç
+    // 2. OBB Bì˜ ì¶• 3ê°œ ê²€ì‚¬
     for (int i = 0; i < 3; i++) {
         if (is_separated(a, b, b.u[i])) return false;
     }
 
-    // 3. ±³Â÷ Ãà (A_i x B_j) 9°³ °Ë»ç
+    // 3. êµì°¨ ì¶• (A_i x B_j) 9ê°œ ê²€ì‚¬
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             glm::vec3 cross_axis = glm::cross(a.u[i], b.u[j]);
@@ -715,48 +713,48 @@ bool check_obb_collision(const SHAPE& shapeA, const SHAPE& shapeB) {
         }
     }
 
-    // 15°³ Ãà ¸ğµÎ¿¡¼­ ºĞ¸®µÇÁö ¾Ê¾Ò´Ù¸é Ãæµ¹!
+    // 15ê°œ ì¶• ëª¨ë‘ì—ì„œ ë¶„ë¦¬ë˜ì§€ ì•Šì•˜ë‹¤ë©´ ì¶©ëŒ!
     return true;
 }
 
 void read_mtl_file(const char* filename) {
     FILE* file;
     if (fopen_s(&file, filename, "r") != 0 || file == NULL) {
-        // MTL ÆÄÀÏÀÌ ¾ø¾îµµ OBJ ·ÎµùÀº °è¼Ó ÁøÇà (±âº» »ö»ó »ç¿ë)
         std::cerr << "Warning: Could not open MTL file: " << filename << std::endl;
         return;
     }
 
     char line[MAX_LINE_LENGTH];
     Material current_mat;
-    current_mat.name = "default_material"; // ±âº» ÀçÁú ÀÌ¸§
+    bool is_processing_material = false; // ì¬ì§ˆì„ ì²˜ë¦¬ ì¤‘ì¸ì§€ í™•ì¸í•˜ëŠ” í”Œë˜ê·¸
 
     while (fgets(line, sizeof(line), file)) {
-        read_newline(line);
+        read_newline(line); // \n ì œê±°
 
         if (strncmp(line, "newmtl ", 7) == 0) {
-            // »õ ÀçÁú ½ÃÀÛ: ÀÌÀü ÀçÁú ÀúÀå (Ã¹ ¹øÂ° ·çÇÁ¿¡¼­´Â default_materialÀ» °Ç³Ê¶İ´Ï´Ù)
-            if (current_mat.name != "default_material" || materials.empty()) {
+            // 1. "newmtl"ì„ ë§Œë‚¬ì„ ë•Œ,
+            //    ì´ì „ì— ì²˜ë¦¬ ì¤‘ì´ë˜ ì¬ì§ˆì´ ìˆì—ˆë‹¤ë©´(is_processing_material == true) ë¨¼ì € ì €ì¥í•©ë‹ˆë‹¤.
+            if (is_processing_material) {
                 materials.push_back(current_mat);
             }
 
-            // »õ ÀçÁú ÃÊ±âÈ­
-            current_mat = Material();
+            // 2. ìƒˆ ì¬ì§ˆ ì²˜ë¦¬ë¥¼ ì‹œì‘í•©ë‹ˆë‹¤.
+            current_mat = Material(); // ë””í´íŠ¸ ê°’(íšŒìƒ‰)ìœ¼ë¡œ ì´ˆê¸°í™”
             current_mat.name = std::string(line + 7);
-
+            is_processing_material = true; // í”Œë˜ê·¸ ì„¤ì •
         }
         else if (strncmp(line, "Kd ", 3) == 0) {
-            // Kd (Diffuse color) ÀĞ±â
+            // 3. Kd ê°’ì„ ì½ìŠµë‹ˆë‹¤. (sscanf_s ëŒ€ì‹  sscanf ì‚¬ìš©)
             float r, g, b;
-            if (sscanf_s(line + 3, "%f %f %f", &r, &g, &b) == 3) {
-                current_mat.diffuse = glm::vec3(r, g, b);
+            if (sscanf(line + 3, "%f %f %f", &r, &g, &b) == 3) {
+                current_mat.diffuse = glm::vec3(r, g, b); // ë¹¨ê°„ìƒ‰ìœ¼ë¡œ ë®ì–´ì“°ê¸°
             }
         }
-        // Ka (Ambient color)¸¦ ÀĞÀ¸·Á¸é Ãß°¡ÀûÀÎ else if ¹®À» ³ÖÀ» ¼ö ÀÖ½À´Ï´Ù.
+        // Ka, Ks ë“± ë‹¤ë¥¸ ì†ì„±ë„ í•„ìš”í•˜ë©´ ì—¬ê¸°ì— ì¶”ê°€
     }
 
-    // ¸¶Áö¸· ÀçÁú ÀúÀå
-    if (current_mat.name != "default_material" || materials.empty()) {
+    // 4. íŒŒì¼ ëì— ë„ë‹¬í–ˆì„ ë•Œ, ë§ˆì§€ë§‰ìœ¼ë¡œ ì²˜ë¦¬ ì¤‘ì´ë˜ ì¬ì§ˆì„ ì €ì¥í•©ë‹ˆë‹¤.
+    if (is_processing_material) {
         materials.push_back(current_mat);
     }
 
