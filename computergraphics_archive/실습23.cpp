@@ -585,7 +585,7 @@ void DrawScene() {
     //cameraPos.z = r * glm::sin(cameraAngle);
 
     glEnable(GL_DEPTH_TEST); // 깊이 테스트 활성화
-    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
     //if(silver)
     //	glEnable(GL_CULL_FACE);// 은면 제거 활성화
     //else
