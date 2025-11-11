@@ -1,8 +1,8 @@
 #version 330 core
 
 layout(location = 0) in vec3 aPos;     // 정점 위치
-layout(location = 1) in vec3 aColor;   // 정점 색상
-layout(location = 2) in vec3 vNormal;  // 노멀 벡터
+layout(location = 1) in vec3 vNormal;  // 노멀 벡터
+layout(location = 2) in vec3 aColor;   // 정점 색상
 
 out vec3 FragPos;
 out vec3 Normal;
