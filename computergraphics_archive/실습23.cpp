@@ -634,7 +634,9 @@ void DrawScene() {
         GLuint offset = 0;
         for (int i = 0;i < shape.size();++i) {
             for (int j = 0; j < shape[i].vertexData.size() / 9; ++j) {
+
                 glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(shape[i].modelMat));
+
                 glUniform3f(faceColorLoc, shape[i].colors[0], shape[i].colors[1], shape[i].colors[2]);
                 glDrawArrays(GL_TRIANGLES, offset, 3);
                 offset += 3;
@@ -652,7 +654,9 @@ void DrawScene() {
         GLuint offset = 0;
         for (int i = 0;i < shape.size();++i) {
             for (int j = 0; j < shape[i].vertexData.size() / 9; ++j) {
+
                 glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(shape[i].modelMat));
+
                 glUniform3f(faceColorLoc, shape[i].colors[0], shape[i].colors[1], shape[i].colors[2]);
                 glDrawArrays(GL_TRIANGLES, offset, 3);
                 offset += 3;
@@ -670,7 +674,9 @@ void DrawScene() {
         GLuint offset = 0;
         for (int i = 0;i < shape.size();++i) {
             for (int j = 0; j < shape[i].vertexData.size() / 9; ++j) {
+
                 glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(shape[i].modelMat));
+
                 glUniform3f(faceColorLoc, shape[i].colors[0], shape[i].colors[1], shape[i].colors[2]);
                 glDrawArrays(GL_TRIANGLES, offset, 3);
                 offset += 3;
