@@ -4,6 +4,9 @@ layout(location = 0) in vec3 aPos;     // 정점 위치
 layout(location = 1) in vec3 vNormal;  // 노멀 벡터
 layout(location = 2) in vec3 aColor;   // 정점 색상
 
+// 노멀 행렬을 유니폼으로 추가하거나, uModel에서 계산하여 사용
+uniform mat3 uNormalMatrix; // uModel의 역행렬의 전치행렬 (3x3)
+
 out vec3 FragPos;
 out vec3 Normal;
 
@@ -21,5 +24,5 @@ void main()
     vColor = aColor;
 
     FragPos = vec3(uModel * vec4(aPos,1.0));
-    Normal = vNormal;
+    Normal = normalize(uNormalMatrix * vNormal); // 2. 월드 공간 노멀 변환 (uModel의 역전치 행렬 사용)
 }

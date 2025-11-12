@@ -43,14 +43,21 @@ GLuint axis_vao, axis_vbo; // 좌표축을 위한 VAO, VBO
 bool axis_display = true;
 bool depth_on = true;
 
-float x_cam = 4.0f;
-float y_cam = 4.0f;
-float z_cam = 4.0f;
+float x_cam = 10.0f;
+float y_cam = 10.0f;
+float z_cam = 10.0f;
 float x_at = 0.0f;
 float y_at = 0.0f;
 float z_at = 0.0f;
 
-bool open = false;
+glm::vec4 light_pos;
+
+bool isn = false;
+bool ism = false;
+float y_radian_stack = 0.0f;
+bool isy = false;
+float r_radian_stack = 0.0f;
+float light_x = 7.0f;
 //
 
 struct OBB {
@@ -121,8 +128,11 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
     // 버퍼(VAO/VBO/EBO) 초기화 (셰이더 프로그램 생성 후 호출)
     InitBuffer();
     InitAxisBuffer();
-    LoadOBJ("15_cube.obj", 0);
-    LoadOBJ("15_pyramid.obj", 1);
+    LoadOBJ("n_cube.obj", 0);
+    LoadOBJ("n_cube.obj", 1);
+    LoadOBJ("n_ring.obj", 2);
+    LoadOBJ("n_pyramid.obj", 3);
+
 
     glutDisplayFunc(drawScene); //--- 출력 콜백 함수
     glutReshapeFunc(Reshape);
@@ -226,10 +236,19 @@ GLvoid drawScene() {
     else
         glDisable(GL_DEPTH_TEST);
 
-    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(shaderProgramID);
+
+    unsigned int lightPosLocation = glGetUniformLocation(shaderProgramID, "lightPos"); //--- lightPos 값 전달
+    glUniform3f(lightPosLocation, light_pos.x, light_pos.y, light_pos.z);
+    unsigned int lightColorLocation = glGetUniformLocation(shaderProgramID, "lightColor"); //--- lightColor 값 전달
+    if(!ism) glUniform3f(lightColorLocation, 1.0, 1.0, 1.0);
+    else glUniform3f(lightColorLocation, 0.0f, 0.0f, 0.0f);
+    unsigned int viewPosLocation = glGetUniformLocation(shaderProgramID, "viewPos"); //--- viewPos 값 전달
+    glUniform3f(viewPosLocation, x_cam, y_cam, z_cam);
+
 
     if (axis_display) draw_axis();  //좌표축 그리기
 
@@ -258,13 +277,21 @@ GLvoid drawScene() {
         glm::mat4 model = shapes[i].model;
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
-
         if (modelLoc == -1) {
             std::cerr << "ERROR: Model uniform location not found!" << std::endl;
         }
 
-        int vertexCount = shapes[i].vertex.size() / 6;
-        glDrawArrays(GL_TRIANGLES, first, vertexCount);
+        // 노멀 행렬 계산: Model 행렬의 역전치 행렬 (3x3)
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
+        // 노멀 행렬 유니폼 위치 찾기 및 전달
+        GLuint normalMatLoc = glGetUniformLocation(shaderProgramID, "uNormalMatrix");
+        if (normalMatLoc != -1) {
+            glUniformMatrix3fv(normalMatLoc, 1, GL_FALSE, &normalMatrix[0][0]);
+        }
+
+        int vertexCount = shapes[i].vertex.size() / 9;
+        if ((!isn && shapes[i].object_num != 3) || (isn && shapes[i].object_num != 0))
+            glDrawArrays(GL_TRIANGLES, first, vertexCount);
         first += vertexCount;
     }
 
@@ -280,8 +307,29 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 GLvoid Keyboard(unsigned char key, int x, int y)
 {
     switch (key) {
+    case 'n':
+        isn = !isn;
+        break;
+    case 'm':
+        ism = !ism;
+        break;
     case 'h':
         depth_on = !depth_on;
+        break;
+    case'y':
+        isy = !isy;
+        break;
+    case'r':
+        r_radian_stack += 5.0f;
+        break;
+    case'R':
+        r_radian_stack -= 5.0f;
+        break;
+    case'z':
+        light_x -= 0.2f;
+        break;
+    case'Z':
+        light_x += 0.2f;
         break;
     case VK_TAB:
         axis_display = !axis_display;
@@ -298,15 +346,45 @@ GLvoid Timer(int value) //--- 콜백 함수: 타이머 콜백 함수
 {
     //====================================================================
     //선언    
-
+    
     //====================================================================
     // 충돌처리
+    
+    //====================================================================
+    // 변수 업데이트
+    if (isy) y_radian_stack += 1.0f;
 
     //====================================================================
     //모델 행렬 업데이트
     for (int i = 0; i < shapes.size(); i++) {
+        shapes[i].model = glm::mat4(1.0f);
+
+        if (shapes[i].object_num == 0) {
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(y_radian_stack), glm::vec3(0.0f, 1.0f, 0.0f));
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(2.0f));
+        }
+        else if (shapes[i].object_num == 1) {
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(r_radian_stack), glm::vec3(0.0f, 1.0f, 0.0f));
+            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(light_x, 0.0f, 0.0f));
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(0.8f));
+        }
+        else if (shapes[i].object_num == 2) {
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(light_x,1.0f, light_x));
+        }
+        else if (shapes[i].object_num == 3) {
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(y_radian_stack), glm::vec3(0.0f, 1.0f, 0.0f));
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(2.0f));
+        }
+
         update_world_obb(shapes[i]);
     }
+    //====================================================================
+    // 조명 업데이트
+    light_pos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    glm::mat4 light_model = glm::mat4(1.0f);
+    light_model = glm::rotate(light_model, glm::radians(r_radian_stack), glm::vec3(0.0f, 1.0f, 0.0f));
+    light_model = glm::translate(light_model, glm::vec3(light_x, 0.0f, 0.0f));
+    light_pos = light_model * light_pos;
 
     glutPostRedisplay(); // 다시 그리기 요청
     glutTimerFunc(1000 / 60, Timer, 1); //--- 타이머 콜백함수 지정 (60 FPS)
@@ -341,8 +419,6 @@ void InitBuffer()
     glBindVertexArray(0);
 
     glUseProgram(shaderProgramID);
-    int lightColorLocation = glGetUniformLocation(shaderProgramID, "lightColor"); //--- lightColor 값 전달: (1.0, 1.0, 1.0) 백색
-    glUniform3f(lightColorLocation, 1.0, 1.0, 1.0);
 }
 
 void UpdateBuffer()
@@ -393,15 +469,21 @@ struct Vertex {
     float x, y, z;
 };
 
+struct Normal {
+    float x, y, z;
+};
+
 struct Face {
-    unsigned int v1, v2, v3;
+    // OBJ 파일은 v/vt/vn 순서로 인덱스를 가집니다.
+    // 여기서는 텍스처 좌표(vt)는 무시하고, 위치(v)와 노멀(vn) 인덱스만 사용합니다.
+    unsigned int v_idx[3];  // 정점 위치 인덱스 (v1, v2, v3)
+    unsigned int vn_idx[3]; // 정점 노멀 인덱스 (vn1, vn2, vn3)
 };
 
 struct Model {
-    Vertex* vertices;
-    size_t vertex_count;
-    Face* faces;
-    size_t face_count;
+    std::vector<Vertex> vertices;       // v
+    std::vector<Normal> normals;        // vn
+    std::vector<Face> faces;            // f v/vt/vn v/vt/vn v/vt/vn
 };
 std::vector<Model> models;
 Model read_obj_file(const char* filename);
@@ -415,43 +497,48 @@ void read_newline(char* str) {
 Model read_obj_file(const char* filename) {
     Model model;
     FILE* file;
-    fopen_s(&file, filename, "r");
+    // fopen_s는 Visual Studio 전용이므로, 이식성을 위해 fopen을 사용하고
+    // 안전한 코드를 위해 에러 처리를 추가합니다.
+    file = fopen(filename, "r");
     if (!file) {
         perror("Error opening file");
         exit(EXIT_FAILURE);
     }
     char line[MAX_LINE_LENGTH];
-    model.vertex_count = 0;
-    model.face_count = 0;
 
     while (fgets(line, sizeof(line), file)) {
         read_newline(line);
-        if (line[0] == 'v' && line[1] == ' ')
-            model.vertex_count++;
-        else if (line[0] == 'f' && line[1] == ' ')
-            model.face_count++;
-    }
 
-    fseek(file, 0, SEEK_SET);
-    model.vertices = (Vertex*)malloc(model.vertex_count * sizeof(Vertex));
-    model.faces = (Face*)malloc(model.face_count * sizeof(Face));
-    size_t vertex_index = 0; size_t face_index = 0;
-    while (fgets(line, sizeof(line), file)) {
-        read_newline(line);
-        if (line[0] == 'v' && line[1] == ' ') {
-            int result = sscanf_s(line + 2, "%f %f %f",
-                &model.vertices[vertex_index].x,
-                &model.vertices[vertex_index].y,
-                &model.vertices[vertex_index].z);
-            vertex_index++;
+        if (strncmp(line, "v ", 2) == 0) {
+            float x, y, z;
+            if (sscanf(line + 2, "%f %f %f", &x, &y, &z) == 3) {
+                model.vertices.push_back({ x, y, z });
+            }
         }
-        else if (line[0] == 'f' && line[1] == ' ') {
-            unsigned int v1, v2, v3;
-            int result = sscanf_s(line + 2, "%u %u %u", &v1, &v2, &v3);
-            model.faces[face_index].v1 = v1 - 1; // OBJ indices start at 1
-            model.faces[face_index].v2 = v2 - 1;
-            model.faces[face_index].v3 = v3 - 1;
-            face_index++;
+        else if (strncmp(line, "vn ", 3) == 0) {
+            float x, y, z;
+            if (sscanf(line + 3, "%f %f %f", &x, &y, &z) == 3) {
+                model.normals.push_back({ x, y, z });
+            }
+        }
+        else if (strncmp(line, "f ", 2) == 0) {
+            Face face;
+            // OBJ 면 정의 파싱: v/vt/vn v/vt/vn v/vt/vn
+            // 텍스처 좌표(vt)는 %*u 로 무시하고, 위치(v)와 노멀(vn) 인덱스만 추출
+            // %u/%*u/%u 형태의 파싱을 수행하며, 인덱스는 1부터 시작하므로 -1을 해줘야 합니다.
+            int result = sscanf(line + 2, "%u/%*u/%u %u/%*u/%u %u/%*u/%u",
+                &face.v_idx[0], &face.vn_idx[0],
+                &face.v_idx[1], &face.vn_idx[1],
+                &face.v_idx[2], &face.vn_idx[2]);
+
+            // 정점 인덱스는 1부터 시작하므로 0-base 인덱스로 변환
+            if (result == 6) {
+                for (int i = 0; i < 3; i++) {
+                    face.v_idx[i] -= 1;
+                    face.vn_idx[i] -= 1;
+                }
+                model.faces.push_back(face);
+            }
         }
     }
     fclose(file);
@@ -461,7 +548,8 @@ Model read_obj_file(const char* filename) {
 void LoadOBJ(const char* filename, int object_num)
 {
     models.clear();
-    models.push_back(read_obj_file(filename));
+    Model m = read_obj_file(filename); // OBJ 파일을 읽어서 Model 구조체에 저장
+    models.push_back(m); // 전역 models vector에 저장
 
     // --- OBB 계산을 위한 로컬 좌표계의 최소/최대값 초기화
     glm::vec3 min_v = glm::vec3(FLT_MAX);
@@ -473,30 +561,33 @@ void LoadOBJ(const char* filename, int object_num)
     SHAPE object_shape;
     object_shape.object_num = object_num;
 
-    // --- AABB 계산 및 정점 데이터 합치기 ---
-    for (auto& m : models) {
-        for (size_t i = 0; i < m.face_count; i++) {
-            Face f = m.faces[i];
-            Vertex v1 = m.vertices[f.v1];
-            Vertex v2 = m.vertices[f.v2];
-            Vertex v3 = m.vertices[f.v3];
+    // --- 정점 데이터 합치기: 위치(3), 노멀(3), 색상(3) -> 총 9 float ---
+    for (auto& m : models) { // models vector를 순회하지만 실제로는 방금 로드한 1개의 모델만 존재
+        for (const auto& f : m.faces) {
+            // 각 면(삼각형)의 3개 정점을 순회
+            for (int i = 0; i < 3; i++) {
+                const Vertex& v = m.vertices[f.v_idx[i]];
+                const Normal& n = m.normals[f.vn_idx[i]];
 
-            // AABB 계산 (모든 정점을 대상으로)
-            for (const Vertex* v : { &v1, &v2, &v3 }) {
-                min_v.x = glm::min(min_v.x, v->x);
-                min_v.y = glm::min(min_v.y, v->y);
-                min_v.z = glm::min(min_v.z, v->z);
-                max_v.x = glm::max(max_v.x, v->x);
-                max_v.y = glm::max(max_v.y, v->y);
-                max_v.z = glm::max(max_v.z, v->z);
+                // AABB 계산 (모든 정점을 대상으로) - 기존 코드 유지
+                // OBJ 파일의 정점 인덱스 f.v_idx[i]를 사용하여 위치 데이터 가져옴
+                // AABB 계산 코드가 빠져 있으므로, 다시 추가합니다.
+                glm::vec3 current_v = glm::vec3(v.x, v.y, v.z);
+                min_v.x = glm::min(min_v.x, current_v.x);
+                min_v.y = glm::min(min_v.y, current_v.y);
+                min_v.z = glm::min(min_v.z, current_v.z);
+                max_v.x = glm::max(max_v.x, current_v.x);
+                max_v.y = glm::max(max_v.y, current_v.y);
+                max_v.z = glm::max(max_v.z, current_v.z);
+
+                // VBO에 들어갈 데이터 (위치(3), 노멀(3), 색상(3) 순서)
+                object_shape.vertex.insert(object_shape.vertex.end(), {
+                    v.x, v.y, v.z,      // 위치 (vPos, location=0)
+                    n.x, n.y, n.z,      // 노멀 (vNormal, location=1)
+                    r, g, b             // 색상 (aColor, location=2)
+                    });
             }
-
-            object_shape.vertex.insert(object_shape.vertex.end(), {
-                v1.x, v1.y, v1.z, r, g, b,
-                v2.x, v2.y, v2.z, r, g, b,
-                v3.x, v3.y, v3.z, r, g, b
-                });
-            object_shape.face_count++;
+            object_shape.face_count++; // 면 개수 증가
         }
     }
 
