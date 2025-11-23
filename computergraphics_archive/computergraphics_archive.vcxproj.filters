@@ -138,6 +138,9 @@
     <ClCompile Include="실습28.cpp">
       <Filter>소스 파일\실습</Filter>
     </ClCompile>
+    <ClCompile Include="실습29.cpp">
+      <Filter>소스 파일\실습</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="vertex.glsl">
@@ -159,6 +162,12 @@
       <Filter>헤더 파일</Filter>
     </None>
     <None Include="fragment_light_28.glsl">
+      <Filter>헤더 파일</Filter>
+    </None>
+    <None Include="t_fragment.glsl">
+      <Filter>헤더 파일</Filter>
+    </None>
+    <None Include="t_vertex.glsl">
       <Filter>헤더 파일</Filter>
     </None>
   </ItemGroup>

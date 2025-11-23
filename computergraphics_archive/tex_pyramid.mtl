@@ -1,0 +1,37 @@
+# 3ds Max Wavefront OBJ Exporter v0.99 - (c)2007 guruware
+# File Created: 24.11.2025 05:08:36
+
+# 측면 1
+newmtl pyramid_face_01
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0000 0.0000 0.0000
+	illum 2
+	map_Kd texture\pyramid1.png
+
+# 측면 2
+newmtl pyramid_face_02
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0000 0.0000 0.0000
+	illum 2
+	map_Kd texture\pyramid2.png
+
+# 측면 3
+newmtl pyramid_face_03
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0000 0.0000 0.0000
+	illum 2
+	map_Kd texture\pyramid3.png
+
+# 측면 4
+newmtl pyramid_face_04
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0000 0.0000 0.0000
+	illum 2
+	map_Kd texture\pyramid4.png
+
+# 밑면 (Base)
+newmtl pyramid_base_05
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0000 0.0000 0.0000
+	illum 2
+	map_Kd texture\pyramid5.png
