@@ -545,10 +545,8 @@ GLuint load_texture_from_file(const char* filename) {
         glGenerateMipmap(GL_TEXTURE_2D);
 
         stbi_image_free(data);
-        std::cout << "Texture loaded successfully: " << filename << std::endl;
     }
     else {
-        std::cerr << "ERROR: Texture failed to load at path: " << filename << std::endl;
         stbi_image_free(data);
         glDeleteTextures(1, &textureID);
         return 0;
@@ -667,7 +665,6 @@ void LoadOBJ(const char* filename, int object_num)
 void read_mtl_file(const char* filename) {
     FILE* file;
     if (fopen_s(&file, filename, "r") != 0 || file == NULL) {
-        std::cerr << "Warning: Could not open MTL file: " << filename << std::endl;
         return;
     }
 
@@ -723,10 +720,6 @@ void read_mtl_file(const char* filename) {
                 else {
                     current_mat.diffuse_map_filename += ".png";
                 }
-            }
-
-            if (!current_mat.diffuse_map_filename.empty()) {
-                std::cout << "MTL found texture map: " << current_mat.diffuse_map_filename << std::endl;
             }
         }
     }
