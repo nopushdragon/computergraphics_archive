@@ -126,6 +126,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
     // 텍스처 로딩: LoadOBJ에서 MTL 파일 이름이 추출된 후 텍스처가 로드됨
     LoadOBJ("tex_cube.obj", 0);
     LoadOBJ("tex_pyramid.obj", 1);
+    LoadOBJ("tex_cube.obj", 2);
 
     glutDisplayFunc(drawScene); //--- 출력 콜백 함수
     glutReshapeFunc(Reshape);
@@ -275,8 +276,8 @@ GLvoid drawScene() {
         int vertexCount = shapes[i].vertex.size() / 8;
 
         // VBO에서 현재 SHAPE의 데이터가 시작되는 위치(offset)부터 렌더링
-        if(c_p == false && shapes[i].object_num == 0) glDrawArrays(GL_TRIANGLES, first, vertexCount);
-        else if (c_p == true && shapes[i].object_num == 1) glDrawArrays(GL_TRIANGLES, first, vertexCount);
+        if(c_p == false && shapes[i].object_num == 0 || shapes[i].object_num == 2) glDrawArrays(GL_TRIANGLES, first, vertexCount);
+        else if (c_p == true && shapes[i].object_num == 1 || shapes[i].object_num == 2) glDrawArrays(GL_TRIANGLES, first, vertexCount);
 
         // 다음 SHAPE의 시작 위치로 인덱스 업데이트
         first += vertexCount;
@@ -324,8 +325,16 @@ GLvoid Timer(int value)
     for( int i = 0 ; i<shapes.size(); i++ )
     {
         shapes[i].model = glm::mat4(1.0f);
-        shapes[i].model = glm::rotate(shapes[i].model, glm::radians(y_stack), glm::vec3(0.0f, 1.0f, 0.0f));
-        shapes[i].model = glm::rotate(shapes[i].model, glm::radians(x_stack), glm::vec3(1.0f, 0.0f, 0.0f));
+        if (shapes[i].object_num == 0 || shapes[i].object_num == 1) {
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(y_stack), glm::vec3(0.0f, 1.0f, 0.0f));
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(x_stack), glm::vec3(1.0f, 0.0f, 0.0f));
+        }
+        else {
+            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(-3.0f, -3.0f, -3.0f));
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(10.0f, 10.0f,1.0f));
+        }
     }
 
     glutPostRedisplay();
