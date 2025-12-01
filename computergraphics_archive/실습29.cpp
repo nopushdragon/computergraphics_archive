@@ -237,34 +237,78 @@ GLvoid drawScene() {
     else
         glDisable(GL_DEPTH_TEST);
 
-    // 🚨 배경색을 밝은 회색으로 변경하여 모델과 구분
+    // 배경색
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(shaderProgramID);
 
-    // View 및 Projection 행렬 설정
+    // 카메라 뷰 및 기본 원근 투영(나중에 배경을 별도로 그릴 때 교체)
     glm::mat4 view = glm::lookAt(
         glm::vec3(x_cam, y_cam, z_cam),
         glm::vec3(x_at, y_at, z_at),
         glm::vec3(0.0f, 1.0f, 0.0f)
     );
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+    glm::mat4 perspectiveProj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
 
     GLuint modelLoc = glGetUniformLocation(shaderProgramID, "uModel");
     GLuint viewLoc = glGetUniformLocation(shaderProgramID, "uView");
     GLuint projLoc = glGetUniformLocation(shaderProgramID, "uProj");
 
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
+    // 전체 셰이프들의 시작 인덱스(버텍스 오프셋)를 미리 계산
+    std::vector<int> starts(shapes.size());
+    int acc = 0;
+    for (size_t i = 0; i < shapes.size(); ++i) {
+        starts[i] = acc;
+        int verts = (int)shapes[i].vertex.size() / 8; // 정점당 8 float
+        acc += verts;
+    }
 
     glBindVertexArray(vao);
-    GLint first = 0;
-
     glActiveTexture(GL_TEXTURE0); // Texture Unit 0 활성화
 
-    // SHAPE 객체를 순회하며 렌더링
-    for (int i = 0; i < shapes.size(); i++) {
+    // 1) 배경( object_num == 2 )을 먼저 그림
+    //    - 깊이 쓰기 끄고 깊이 테스트 비활성화하여 다른 도형 뒤에 항상 위치
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+
+    float aspect = (float)width / (float)height;
+    float orthoSize = 30.0f;
+    glm::mat4 proj_bg = glm::ortho(-orthoSize * aspect, orthoSize * aspect, -orthoSize, orthoSize, 0.1f, 100.0f);
+    glm::mat4 view_bg = glm::mat4(1.0f); // 배경은 카메라의 회전에 영향받지 않게 할 수 있음
+
+    for (size_t i = 0; i < shapes.size(); ++i) {
+        if (shapes[i].object_num != 2) continue;
+
+        // 배경용 프로젝션/뷰 설정
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view_bg[0][0]);
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, &proj_bg[0][0]);
+
+        // 텍스처 바인딩
+        glBindTexture(GL_TEXTURE_2D, shapes[i].texture_id);
+
+        // 모델: 큰 스케일로 화면을 덮도록 설정 (모델의 원래 transform 대신 override)
+        glm::mat4 model_bg = glm::mat4(1.0f);
+        // XY 평면을 가로/세로로 충분히 확대. Z는 적당히 뒤로 배치.
+        model_bg = glm::translate(model_bg, glm::vec3(0.0f, 0.0f, -50.0f));
+        model_bg = glm::scale(model_bg, glm::vec3(orthoSize * 2.0f * aspect, orthoSize * 2.0f, 1.0f));
+
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model_bg[0][0]);
+
+        int vertexCount = shapes[i].vertex.size() / 8;
+        glDrawArrays(GL_TRIANGLES, starts[i], vertexCount);
+    }
+
+    // 배경 그리기 끝 — 깊이 쓰기/테스트 복원
+    glDepthMask(GL_TRUE);
+    if (depth_on) glEnable(GL_DEPTH_TEST);
+
+    // 2) 나머지 도형들 (원래 카메라/원근 투영 사용)
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, &perspectiveProj[0][0]);
+    GLint first = 0;
+    for (size_t i = 0; i < shapes.size(); ++i) {
+        if (shapes[i].object_num == 2) continue; // 이미 그렸음
 
         // 텍스처 바인딩 (SHAPE에 해당하는 텍스처)
         glBindTexture(GL_TEXTURE_2D, shapes[i].texture_id);
@@ -272,14 +316,9 @@ GLvoid drawScene() {
         glm::mat4 model = shapes[i].model;
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
 
-        // 현재 SHAPE의 정점 개수 (정점당 8개의 GLfloat)
         int vertexCount = shapes[i].vertex.size() / 8;
-
-        // VBO에서 현재 SHAPE의 데이터가 시작되는 위치(offset)부터 렌더링
-        if(c_p == false && shapes[i].object_num == 0 || shapes[i].object_num == 2) glDrawArrays(GL_TRIANGLES, first, vertexCount);
+        if (c_p == false && shapes[i].object_num == 0 || shapes[i].object_num == 2) glDrawArrays(GL_TRIANGLES, first, vertexCount);
         else if (c_p == true && shapes[i].object_num == 1 || shapes[i].object_num == 2) glDrawArrays(GL_TRIANGLES, first, vertexCount);
-
-        // 다음 SHAPE의 시작 위치로 인덱스 업데이트
         first += vertexCount;
     }
 
@@ -290,8 +329,73 @@ GLvoid drawScene() {
 
 GLvoid Reshape(int w, int h)
 {
-    glViewport(0, 0, w, h);
+    // 전역 width/height 갱신 (투영 비율을 올바르게 유지)
+    width = (w > 0) ? w : 1;
+    height = (h > 0) ? h : 1;
+    glViewport(0, 0, width, height);
 }
+
+//GLvoid drawScene() {
+//    if (depth_on)
+//        glEnable(GL_DEPTH_TEST); // 은면제거
+//    else
+//        glDisable(GL_DEPTH_TEST);
+//
+//    // 🚨 배경색을 밝은 회색으로 변경하여 모델과 구분
+//    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//
+//    glUseProgram(shaderProgramID);
+//
+//    // View 및 Projection 행렬 설정
+//    glm::mat4 view = glm::lookAt(
+//        glm::vec3(x_cam, y_cam, z_cam),
+//        glm::vec3(x_at, y_at, z_at),
+//        glm::vec3(0.0f, 1.0f, 0.0f)
+//    );
+//    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+//
+//    GLuint modelLoc = glGetUniformLocation(shaderProgramID, "uModel");
+//    GLuint viewLoc = glGetUniformLocation(shaderProgramID, "uView");
+//    GLuint projLoc = glGetUniformLocation(shaderProgramID, "uProj");
+//
+//    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+//    glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
+//
+//    glBindVertexArray(vao);
+//    GLint first = 0;
+//
+//    glActiveTexture(GL_TEXTURE0); // Texture Unit 0 활성화
+//
+//    // SHAPE 객체를 순회하며 렌더링
+//    for (int i = 0; i < shapes.size(); i++) {
+//
+//        // 텍스처 바인딩 (SHAPE에 해당하는 텍스처)
+//        glBindTexture(GL_TEXTURE_2D, shapes[i].texture_id);
+//
+//        glm::mat4 model = shapes[i].model;
+//        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
+//
+//        // 현재 SHAPE의 정점 개수 (정점당 8개의 GLfloat)
+//        int vertexCount = shapes[i].vertex.size() / 8;
+//
+//        // VBO에서 현재 SHAPE의 데이터가 시작되는 위치(offset)부터 렌더링
+//        if(c_p == false && shapes[i].object_num == 0 || shapes[i].object_num == 2) glDrawArrays(GL_TRIANGLES, first, vertexCount);
+//        else if (c_p == true && shapes[i].object_num == 1 || shapes[i].object_num == 2) glDrawArrays(GL_TRIANGLES, first, vertexCount);
+//
+//        // 다음 SHAPE의 시작 위치로 인덱스 업데이트
+//        first += vertexCount;
+//    }
+//
+//    glBindTexture(GL_TEXTURE_2D, 0); // 텍스처 바인딩 해제
+//    glBindVertexArray(0);
+//    glutSwapBuffers();
+//}
+//
+//GLvoid Reshape(int w, int h)
+//{
+//    glViewport(0, 0, w, h);
+//}
 
 GLvoid Keyboard(unsigned char key, int x, int y)
 {
@@ -324,16 +428,10 @@ GLvoid Timer(int value)
 {
     for( int i = 0 ; i<shapes.size(); i++ )
     {
-        shapes[i].model = glm::mat4(1.0f);
         if (shapes[i].object_num == 0 || shapes[i].object_num == 1) {
+            shapes[i].model = glm::mat4(1.0f);
             shapes[i].model = glm::rotate(shapes[i].model, glm::radians(y_stack), glm::vec3(0.0f, 1.0f, 0.0f));
             shapes[i].model = glm::rotate(shapes[i].model, glm::radians(x_stack), glm::vec3(1.0f, 0.0f, 0.0f));
-        }
-        else {
-            shapes[i].model = glm::translate(shapes[i].model, glm::vec3(-3.0f, -3.0f, -3.0f));
-            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            shapes[i].model = glm::rotate(shapes[i].model, glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            shapes[i].model = glm::scale(shapes[i].model, glm::vec3(10.0f, 10.0f,1.0f));
         }
     }
 
